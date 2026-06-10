@@ -1,22 +1,33 @@
 import axios from 'axios'
 
 const API_URL =
-  import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+  import.meta.env.VITE_API_URL ||
+  'http://127.0.0.1:8000'
 
 const client = axios.create({
   baseURL: API_URL
 })
 
-export async function login(email, password) {
-  const response = await client.post('/login', {
-    email,
-    password
-  })
+export async function login(
+  email,
+  password,
+  role
+) {
+  const response = await client.post(
+    '/login',
+    {
+      email,
+      password,
+      role
+    }
+  )
 
   return response.data
 }
 
 export async function getDonors() {
-  const response = await client.get('/donors')
+  const response =
+    await client.get('/donors')
+
   return response.data
 }

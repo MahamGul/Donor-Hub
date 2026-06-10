@@ -1,16 +1,26 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { login } from '../api'
-import React from 'react'
+
 const STORAGE_KEY = 'donorhub-user'
 
 function Login() {
   const navigate = useNavigate()
 
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const [role, setRole] =
+    useState('donor')
+
+  const [email, setEmail] =
+    useState('')
+
+  const [password, setPassword] =
+    useState('')
+
+  const [loading, setLoading] =
+    useState(false)
+
+  const [error, setError] =
+    useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -19,7 +29,11 @@ function Login() {
     setLoading(true)
 
     try {
-      const data = await login(email, password)
+      const data = await login(
+        email,
+        password,
+        role
+      )
 
       localStorage.setItem(
         STORAGE_KEY,
@@ -28,7 +42,16 @@ function Login() {
 
       navigate('/dashboard')
     } catch (err) {
-      setError('Invalid email or password')
+      if (
+        err.response &&
+        err.response.data
+      ) {
+        setError(
+          err.response.data.detail
+        )
+      } else {
+        setError('Login failed')
+      }
     } finally {
       setLoading(false)
     }
@@ -40,9 +63,30 @@ function Login() {
         <h1>DonorHub Login</h1>
 
         <form onSubmit={handleSubmit}>
+
+          <select
+            value={role}
+            onChange={(e) =>
+              setRole(e.target.value)
+            }
+            style={{
+              width: '100%',
+              padding: '12px',
+              marginBottom: '15px'
+            }}
+          >
+            <option value="donor">
+              Login as Donor
+            </option>
+
+            <option value="recipient">
+              Login as Recipient
+            </option>
+          </select>
+
           <input
             type="email"
-            placeholder="Enter Email"
+            placeholder="Email"
             value={email}
             onChange={(e) =>
               setEmail(e.target.value)
@@ -52,7 +96,7 @@ function Login() {
 
           <input
             type="password"
-            placeholder="Enter Password"
+            placeholder="Password"
             value={password}
             onChange={(e) =>
               setPassword(e.target.value)
@@ -64,11 +108,15 @@ function Login() {
             type="submit"
             disabled={loading}
           >
-            {loading ? 'Signing In...' : 'Login'}
+            {loading
+              ? 'Signing In...'
+              : 'Login'}
           </button>
 
           {error && (
-            <p className="error">{error}</p>
+            <p className="error">
+              {error}
+            </p>
           )}
         </form>
       </div>
