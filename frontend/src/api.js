@@ -31,3 +31,7 @@ export async function getDonors() {
 
   return response.data
 }
+export async function signup(data) {
+  const response = await client.post('/signup', data)
+  return response.data
+}

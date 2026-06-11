@@ -51,6 +51,11 @@ class LoginResponse(BaseModel):
     token_type: str
     user: UserOut
 
+class SignupIn(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+    role: str
 
 @app.on_event("startup")
 async def startup_event():
@@ -137,4 +142,36 @@ async def login(auth: AuthIn):
         "access_token": token_urlsafe(32),
         "token_type": "bearer",
         "user": user,
+    }
+
+@app.post("/signup")
+async def signup(user: SignupIn):
+
+    # check if user exists
+    existing_user = await db.get_user_document_by_email(user.email)
+
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="User already exists with this email"
+        )
+
+    # prepare data
+    user_dict = user.dict()
+
+    # store password directly (temporary)
+    user_dict["password"] = user.password
+
+    # save to DB
+    new_user = await db.create_user(user_dict)
+
+    if not new_user:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create user"
+        )
+
+    return {
+        "message": "User created successfully",
+        "user": new_user
     }

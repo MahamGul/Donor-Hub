@@ -61,3 +61,18 @@ async def get_user_document_by_email(email: str) -> Optional[Dict[str, Any]]:
 
 def verify_password(plain_password: str, stored_password: str) -> bool:
     return plain_password == stored_password
+
+async def create_user(user: Dict[str, Any]) -> Dict[str, Any]:
+    await connect_to_mongo()
+
+    res = await _db.users.insert_one(user)
+
+    new_user = await _db.users.find_one({"_id": res.inserted_id})
+
+    new_user["id"] = str(new_user.get("_id"))
+    new_user.pop("_id", None)
+
+    # IMPORTANT: do NOT return password to frontend
+    new_user.pop("password", None)
+
+    return new_user

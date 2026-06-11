@@ -1,15 +1,17 @@
 import React, { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { login } from '../api'
+import { useNavigate } from 'react-router-dom'
+import { signup } from '../api'
 
 const STORAGE_KEY = 'donorhub-user'
 
-function Login() {
+function Signup() {
   const navigate = useNavigate()
-  const { role } = useParams()
 
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [role, setRole] = useState('donor')
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -20,23 +22,26 @@ function Login() {
     setLoading(true)
 
     try {
-      const data = await login(
+      const data = await signup({
+        name,
         email,
         password,
         role
-      )
+      })
 
+      // optional: store user immediately OR send to login
       localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify(data.user)
+        JSON.stringify(data.user || { name, email, role })
       )
 
-      navigate('/dashboard')
+      // better UX: go to login page after signup
+      navigate(`/login/${role}`)
     } catch (err) {
-      if (err.response && err.response.data) {
+      if (err.response?.data?.detail) {
         setError(err.response.data.detail)
       } else {
-        setError('Login failed')
+        setError('Signup failed')
       }
     } finally {
       setLoading(false)
@@ -46,13 +51,17 @@ function Login() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <h1>
-          {role === 'recipient'
-            ? 'Login as Recipient'
-            : 'Login as Donor'}
-        </h1>
+        <h1>Create Account</h1>
 
         <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="Full Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+
           <input
             type="email"
             placeholder="Email"
@@ -69,21 +78,30 @@ function Login() {
             required
           />
 
+          {/* Role selection */}
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            required
+          >
+            <option value="donor">Donor</option>
+            <option value="recipient">Recipient</option>
+          </select>
+
           <button type="submit" disabled={loading}>
-            {loading ? 'Signing In...' : 'Login'}
+            {loading ? 'Creating Account...' : 'Sign Up'}
           </button>
 
           {error && <p className="error">{error}</p>}
         </form>
 
-        {/* ✅ SIGNUP LINK ADDED HERE */}
         <p style={{ marginTop: '10px' }}>
-          Don’t have an account?{' '}
+          Already have an account?{' '}
           <span
             style={{ cursor: 'pointer', color: 'blue' }}
-            onClick={() => navigate('/signup')}
+            onClick={() => navigate('/login/donor')}
           >
-            Sign up
+            Login
           </span>
         </p>
       </div>
@@ -91,4 +109,4 @@ function Login() {
   )
 }
 
-export default Login
+export default Signup
