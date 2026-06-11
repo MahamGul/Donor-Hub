@@ -14,13 +14,13 @@ function Hero() {
         </p>
 
         <div className="hero-buttons">
-          <Link to="/login">
+          <Link to="/login/donor">
             <button className="btn btn-primary">
               Donate Now
             </button>
           </Link>
 
-          <Link to="/login">
+          <Link to="/login/recipient">
             <button className="btn btn-secondary">
               Request Help
             </button>

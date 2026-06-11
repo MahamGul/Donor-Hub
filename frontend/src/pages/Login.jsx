@@ -1,26 +1,17 @@
 import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { login } from '../api'
 
 const STORAGE_KEY = 'donorhub-user'
 
 function Login() {
   const navigate = useNavigate()
+  const { role } = useParams()
 
-  const [role, setRole] =
-    useState('donor')
-
-  const [email, setEmail] =
-    useState('')
-
-  const [password, setPassword] =
-    useState('')
-
-  const [loading, setLoading] =
-    useState(false)
-
-  const [error, setError] =
-    useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -60,30 +51,13 @@ function Login() {
   return (
     <div className="login-page">
       <div className="login-card">
-        <h1>DonorHub Login</h1>
+        <h1>
+          {role === 'recipient'
+            ? 'Login as Recipient'
+            : 'Login as Donor'}
+        </h1>
 
         <form onSubmit={handleSubmit}>
-
-          <select
-            value={role}
-            onChange={(e) =>
-              setRole(e.target.value)
-            }
-            style={{
-              width: '100%',
-              padding: '12px',
-              marginBottom: '15px'
-            }}
-          >
-            <option value="donor">
-              Login as Donor
-            </option>
-
-            <option value="recipient">
-              Login as Recipient
-            </option>
-          </select>
-
           <input
             type="email"
             placeholder="Email"
