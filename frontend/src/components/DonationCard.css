@@ -1,0 +1,80 @@
+.donation-card {
+  background: #111827;
+  border: 1px solid rgba(232, 160, 32, 0.08);
+  padding: 36px 28px 32px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: background 0.25s ease, border-color 0.25s ease, transform 0.2s ease;
+}
+
+/* Amber underline reveal on hover */
+.donation-card::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #e8a020;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.3s ease;
+}
+
+.donation-card:hover {
+  background: #141e30;
+  border-color: rgba(232, 160, 32, 0.25);
+  transform: translateY(-4px);
+}
+
+.donation-card:hover::after {
+  transform: scaleX(1);
+}
+
+/* ── Icon ── */
+
+.donation-card__icon {
+  display: block;
+  font-size: 38px;
+  margin-bottom: 20px;
+  line-height: 1;
+}
+
+/* ── Title ── */
+
+.donation-card__title {
+  font-family: 'Playfair Display', serif;
+  font-size: 19px;
+  font-weight: 700;
+  color: #f0ede6;
+  margin-bottom: 10px;
+  line-height: 1.25;
+}
+
+/* ── Description ── */
+
+.donation-card__desc {
+  font-size: 13px;
+  color: rgba(240, 237, 230, 0.5);
+  line-height: 1.75;
+}
+
+/* ── Arrow link ── */
+
+.donation-card__arrow {
+  display: block;
+  margin-top: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #e8a020;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.donation-card:hover .donation-card__arrow {
+  opacity: 1;
+  transform: translateX(0);
+}

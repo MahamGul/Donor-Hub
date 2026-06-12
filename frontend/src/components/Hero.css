@@ -1,0 +1,187 @@
+.hero {
+  position: relative;
+  min-height: 92vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+/* ── Backgrounds ───────────────────────────── */
+
+.hero__bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #09101f 0%, #0f1e3a 45%, #0a1928 100%);
+  z-index: 0;
+}
+
+.hero__glow {
+  position: absolute;
+  bottom: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 900px;
+  height: 320px;
+  background: radial-gradient(ellipse, rgba(232, 160, 32, 0.18) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Particles ─────────────────────────────── */
+
+.hero__particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.hero__particle {
+  position: absolute;
+  border-radius: 50%;
+  background: #f5c842;
+  opacity: 0;
+  animation: particle-float linear infinite;
+}
+
+@keyframes particle-float {
+  0%   { opacity: 0;   transform: translateY(0)      scale(1);   }
+  10%  { opacity: 0.7; }
+  90%  { opacity: 0.2; }
+  100% { opacity: 0;   transform: translateY(-320px) scale(0.4); }
+}
+
+/* ── Bridge SVG ────────────────────────────── */
+
+.hero__bridge {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 920px;
+  opacity: 0.2;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ── Content ───────────────────────────────── */
+
+.hero__content {
+  position: relative;
+  z-index: 3;
+  max-width: 680px;
+  padding-top: 60px;
+  padding-bottom: 120px;
+}
+
+.hero__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #e8a020;
+  margin-bottom: 24px;
+}
+
+.hero__eyebrow::before {
+  content: '';
+  display: block;
+  width: 32px;
+  height: 1px;
+  background: #e8a020;
+}
+
+.hero__heading {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(52px, 6.5vw, 84px);
+  font-weight: 900;
+  line-height: 1.04;
+  color: #f0ede6;
+  margin-bottom: 20px;
+}
+
+.hero__heading em {
+  font-style: italic;
+  color: #f5c842;
+}
+
+.hero__sub {
+  font-size: 16px;
+  font-weight: 300;
+  color: rgba(240, 237, 230, 0.62);
+  line-height: 1.85;
+  max-width: 460px;
+  margin-bottom: 40px;
+}
+
+.hero__buttons {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* ── Stats ─────────────────────────────────── */
+
+.hero__stats {
+  position: absolute;
+  bottom: 52px;
+  right: 64px;
+  display: flex;
+  gap: 44px;
+  z-index: 3;
+}
+
+.hero__stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.hero__stat-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 34px;
+  font-weight: 700;
+  color: #f5c842;
+  line-height: 1;
+}
+
+.hero__stat-label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(240, 237, 230, 0.4);
+  margin-top: 5px;
+}
+
+/* ── Responsive ────────────────────────────── */
+
+@media (max-width: 768px) {
+  .hero {
+    min-height: 100svh;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .hero__content {
+    padding: 80px 24px 160px;
+  }
+
+  .hero__stats {
+    right: 24px;
+    bottom: 36px;
+    gap: 28px;
+  }
+
+  .hero__stat-num {
+    font-size: 26px;
+  }
+
+  .hero__bridge {
+    max-width: 100%;
+  }
+}

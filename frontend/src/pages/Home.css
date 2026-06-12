@@ -1,0 +1,40 @@
+.categories {
+  background: #0c1422;
+  padding: 80px 0 90px;
+}
+
+/* Full-bleed card grid (no container wrapper so cards can touch edges) */
+.categories__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 2px;
+  margin-top: 0;
+  padding: 0 48px;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Override scene dividers inside this page */
+.scene-divider-down {
+  background: #0c1422;
+  clip-path: polygon(0 40px, 100% 0, 100% 100%, 0 100%);
+}
+
+.scene-divider-up {
+  background: #09101f;
+  clip-path: polygon(0 0, 100% 40px, 100% 100%, 0 100%);
+}
+
+@media (max-width: 768px) {
+  .categories__grid {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 0 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .categories__grid {
+    grid-template-columns: 1fr;
+  }
+}

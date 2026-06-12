@@ -1,16 +1,40 @@
+import React, { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import React from 'react'
+import './Navbar.css'
 
 function Navbar() {
-  return (
-    <nav className="navbar">
-      <div className="container navbar-content">
-        <h2 className="logo">DonorHub</h2>
+  const [scrolled, setScrolled] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
 
-        <div className="nav-links">
-          <Link to="/">Home</Link>
-          <Link to="/login">Login</Link>
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40)
+    window.addEventListener('scroll', onScroll)
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  return (
+    <nav className={`navbar ${scrolled ? 'navbar--scrolled' : ''}`}>
+      <div className="navbar__inner">
+        <Link to="/" className="navbar__logo">
+          Aid<span>Bridge</span>
+        </Link>
+
+        <div className={`navbar__links ${menuOpen ? 'navbar__links--open' : ''}`}>
+          <Link to="/" onClick={() => setMenuOpen(false)}>Home</Link>
+          <a href="#categories" onClick={() => setMenuOpen(false)}>Categories</a>
+          <a href="#how-it-works" onClick={() => setMenuOpen(false)}>How It Works</a>
+          <Link to="/login/donor" className="navbar__cta" onClick={() => setMenuOpen(false)}>
+            Donate Now
+          </Link>
         </div>
+
+        <button
+          className={`navbar__burger ${menuOpen ? 'navbar__burger--open' : ''}`}
+          onClick={() => setMenuOpen(prev => !prev)}
+          aria-label="Toggle navigation"
+        >
+          <span /><span /><span />
+        </button>
       </div>
     </nav>
   )

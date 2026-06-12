@@ -1,27 +1,18 @@
 import React from 'react'
+import './DonationCard.css'
 
-function DonationCard({ icon, title, description }) {
+function DonationCard({ icon, title, description, linkLabel = 'Donate' }) {
   return (
-    <div className="card">
-      <div
-        style={{
-          fontSize: '50px',
-          marginBottom: '15px'
-        }}
-      >
+    <div className="donation-card">
+      <span className="donation-card__icon" aria-hidden="true">
         {icon}
-      </div>
+      </span>
 
-      <h3>{title}</h3>
+      <h3 className="donation-card__title">{title}</h3>
 
-      <p
-        style={{
-          marginTop: '10px',
-          color: '#555'
-        }}
-      >
-        {description}
-      </p>
+      <p className="donation-card__desc">{description}</p>
+
+      <span className="donation-card__arrow">{linkLabel} →</span>
     </div>
   )
 }

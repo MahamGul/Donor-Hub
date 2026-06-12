@@ -1,0 +1,305 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Inter:wght@300;400;500;600&display=swap');
+
+/* ─── PAGE SHELL ──────────────────────────────────────── */
+
+.auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 48px 24px;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+}
+
+.auth-bg {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #09101f 0%, #0f1e3a 50%, #09101f 100%);
+  z-index: 0;
+}
+
+.auth-glow {
+  position: fixed;
+  bottom: -100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 800px;
+  height: 400px;
+  background: radial-gradient(ellipse, rgba(232, 160, 32, 0.12) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── BACK LINK ───────────────────────────────────────── */
+
+.auth-back {
+  position: fixed;
+  top: 24px;
+  left: 32px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(240, 237, 230, 0.45);
+  text-decoration: none;
+  z-index: 10;
+  transition: color 0.2s;
+}
+
+.auth-back:hover {
+  color: #f5c842;
+}
+
+/* ─── CARD ────────────────────────────────────────────── */
+
+.auth-card {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 420px;
+  background: rgba(17, 24, 39, 0.9);
+  border: 1px solid rgba(232, 160, 32, 0.15);
+  border-radius: 6px;
+  padding: 44px 40px;
+  backdrop-filter: blur(12px);
+}
+
+.auth-card--wide {
+  max-width: 480px;
+}
+
+/* ─── ROLE BADGE ──────────────────────────────────────── */
+
+.auth-role-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: #e8a020;
+  background: rgba(232, 160, 32, 0.1);
+  border: 1px solid rgba(232, 160, 32, 0.2);
+  border-radius: 3px;
+  padding: 5px 12px;
+  margin-bottom: 20px;
+}
+
+.auth-role-badge--recipient {
+  color: #60c4aa;
+  background: rgba(96, 196, 170, 0.1);
+  border-color: rgba(96, 196, 170, 0.2);
+}
+
+/* ─── HEADING ─────────────────────────────────────────── */
+
+.auth-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 30px;
+  font-weight: 900;
+  color: #f0ede6;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+
+.auth-subtitle {
+  font-size: 13px;
+  color: rgba(240, 237, 230, 0.5);
+  line-height: 1.7;
+  margin-bottom: 28px;
+}
+
+/* ─── ROLE TOGGLE (Signup) ────────────────────────────── */
+
+.auth-role-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 28px;
+}
+
+.auth-role-btn {
+  padding: 11px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border-radius: 3px;
+  border: 1px solid rgba(240, 237, 230, 0.12);
+  background: transparent;
+  color: rgba(240, 237, 230, 0.45);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Inter', sans-serif;
+}
+
+.auth-role-btn:hover {
+  border-color: rgba(232, 160, 32, 0.3);
+  color: rgba(240, 237, 230, 0.8);
+}
+
+.auth-role-btn--active {
+  background: rgba(232, 160, 32, 0.12);
+  border-color: #e8a020;
+  color: #f5c842;
+}
+
+/* ─── FORM ────────────────────────────────────────────── */
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.auth-field label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: rgba(240, 237, 230, 0.5);
+}
+
+.auth-field input {
+  background: rgba(9, 16, 31, 0.6);
+  border: 1px solid rgba(240, 237, 230, 0.1);
+  border-radius: 3px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  color: #f0ede6;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.auth-field input::placeholder {
+  color: rgba(240, 237, 230, 0.22);
+}
+
+.auth-field input:focus {
+  border-color: rgba(232, 160, 32, 0.5);
+  background: rgba(9, 16, 31, 0.8);
+}
+
+/* ─── ERROR ───────────────────────────────────────────── */
+
+.auth-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(226, 75, 74, 0.1);
+  border: 1px solid rgba(226, 75, 74, 0.25);
+  border-radius: 3px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #f09595;
+}
+
+/* ─── SUBMIT BUTTON ───────────────────────────────────── */
+
+.auth-submit {
+  margin-top: 6px;
+  background: #e8a020;
+  color: #09101f;
+  padding: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-family: 'Inter', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  transition: background 0.2s, transform 0.15s;
+}
+
+.auth-submit:hover:not(:disabled) {
+  background: #f5c842;
+  transform: translateY(-1px);
+}
+
+.auth-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ─── SPINNER ─────────────────────────────────────────── */
+
+.auth-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(9, 16, 31, 0.3);
+  border-top-color: #09101f;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── ROLE SWITCHER / FOOTER LINKS ───────────────────── */
+
+.auth-switch-role {
+  margin-top: 20px;
+  font-size: 13px;
+  color: rgba(240, 237, 230, 0.4);
+  text-align: center;
+}
+
+.auth-switch-role a {
+  color: #e8a020;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.auth-switch-role a:hover {
+  color: #f5c842;
+}
+
+.auth-divider {
+  height: 1px;
+  background: rgba(240, 237, 230, 0.07);
+  margin: 24px 0;
+}
+
+.auth-footer-link {
+  font-size: 13px;
+  color: rgba(240, 237, 230, 0.4);
+  text-align: center;
+}
+
+.auth-footer-link a {
+  color: #e8a020;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.auth-footer-link a:hover {
+  color: #f5c842;
+}
+
+/* ─── RESPONSIVE ──────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 32px 24px;
+  }
+
+  .auth-title {
+    font-size: 26px;
+  }
+}

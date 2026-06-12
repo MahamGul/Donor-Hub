@@ -1,0 +1,100 @@
+.footer {
+  background: #060d18;
+  padding: 64px 48px 32px;
+  border-top: 1px solid rgba(232, 160, 32, 0.12);
+}
+
+.footer__top {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 48px;
+  margin-bottom: 48px;
+}
+
+/* ── Brand ── */
+
+.footer__brand {
+  max-width: 300px;
+}
+
+.footer__logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  color: #f5c842;
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 14px;
+}
+
+.footer__logo span {
+  color: #f0ede6;
+  font-weight: 400;
+}
+
+.footer__brand p {
+  font-size: 13px;
+  color: rgba(240, 237, 230, 0.4);
+  line-height: 1.75;
+}
+
+/* ── Link groups ── */
+
+.footer__links-group h5 {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: #e8a020;
+  margin-bottom: 16px;
+}
+
+.footer__links-group a {
+  display: block;
+  font-size: 13px;
+  color: rgba(240, 237, 230, 0.45);
+  text-decoration: none;
+  margin-bottom: 10px;
+  transition: color 0.2s;
+}
+
+.footer__links-group a:hover {
+  color: #f0ede6;
+}
+
+/* ── Bottom bar ── */
+
+.footer__bottom {
+  border-top: 1px solid rgba(240, 237, 230, 0.07);
+  padding-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: rgba(240, 237, 230, 0.28);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .footer {
+    padding: 48px 24px 28px;
+  }
+
+  .footer__top {
+    flex-direction: column;
+    gap: 36px;
+  }
+
+  .footer__brand {
+    max-width: 100%;
+  }
+
+  .footer__bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}

@@ -1,0 +1,80 @@
+.cta-band {
+  background: #e8a020;
+  padding: 80px 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 40px;
+}
+
+.cta-band__heading {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(30px, 3.8vw, 48px);
+  font-weight: 900;
+  color: #09101f;
+  line-height: 1.12;
+}
+
+.cta-band__heading em {
+  font-style: italic;
+}
+
+.cta-band__sub {
+  font-size: 14px;
+  color: rgba(9, 16, 31, 0.6);
+  margin-top: 10px;
+  max-width: 360px;
+  line-height: 1.7;
+}
+
+.cta-band__buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.cta-band__btn-dark {
+  background: #09101f;
+  color: #f5c842;
+  padding: 14px 32px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.cta-band__btn-dark:hover {
+  background: #0f1e3a;
+}
+
+.cta-band__btn-outline {
+  background: transparent;
+  color: #09101f;
+  padding: 14px 32px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  border: 2px solid #09101f;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.cta-band__btn-outline:hover {
+  background: rgba(9, 16, 31, 0.1);
+}
+
+@media (max-width: 768px) {
+  .cta-band {
+    padding: 60px 24px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
