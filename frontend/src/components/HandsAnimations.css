@@ -1,0 +1,196 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Inter:wght@300;400;500;600&display=swap');
+
+/* ─── SCENE CONTAINER ─────────────────────────────────── */
+
+.hj-scene {
+  position: relative;
+  width: 100%;
+  height: 480px;
+  background: #09101f;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ─── LIGHT RAYS ──────────────────────────────────────── */
+
+.hj-rays {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  animation: hj-rays-in 1.4s 1.5s ease-out forwards;
+}
+
+.hj-rays svg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes hj-rays-in {
+  from { opacity: 0; transform: scale(0.88); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ─── RADIAL GLOW ─────────────────────────────────────── */
+
+.hj-glow {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(232, 160, 32, 0.24) 0%,
+    rgba(232, 160, 32, 0.08) 45%,
+    transparent 70%
+  );
+  opacity: 0;
+  animation: hj-glow-pulse 1.8s 1.7s ease-in-out forwards;
+}
+
+@keyframes hj-glow-pulse {
+  0%   { opacity: 0; transform: scale(0.5); }
+  55%  { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 0.65; transform: scale(1); }
+}
+
+/* ─── HANDS WRAPPER ───────────────────────────────────── */
+
+.hj-hands {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.hj-hand {
+  position: absolute;
+  width: 210px;
+  height: 210px;
+}
+
+/* Left hand enters from the left */
+.hj-hand--left {
+  margin-right: 90px;
+  animation: hj-left-in 1.5s 0.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transform: translateX(-340px) rotate(-10deg);
+  opacity: 0;
+}
+
+/* Right hand enters from the right */
+.hj-hand--right {
+  margin-left: 90px;
+  animation: hj-right-in 1.5s 0.15s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  transform: translateX(340px) rotate(10deg);
+  opacity: 0;
+}
+
+@keyframes hj-left-in {
+  0%   { transform: translateX(-340px) rotate(-10deg); opacity: 0.2; }
+  65%  { transform: translateX(-6px) rotate(3deg);  opacity: 1; }
+  80%  { transform: translateX(4px)  rotate(-1deg); opacity: 1; }
+  100% { transform: translateX(0px)  rotate(0deg);  opacity: 1; }
+}
+
+@keyframes hj-right-in {
+  0%   { transform: translateX(340px) rotate(10deg);  opacity: 0.2; }
+  65%  { transform: translateX(6px)   rotate(-3deg); opacity: 1; }
+  80%  { transform: translateX(-4px)  rotate(1deg);  opacity: 1; }
+  100% { transform: translateX(0px)   rotate(0deg);  opacity: 1; }
+}
+
+/* ─── SPARK PARTICLES ─────────────────────────────────── */
+
+.hj-spark {
+  position: absolute;
+  border-radius: 50%;
+  background: #f5c842;
+  opacity: 0;
+  animation: hj-spark-pop 0.65s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes hj-spark-pop {
+  0%   { opacity: 1;   transform: scale(1)   translate(0, 0); }
+  60%  { opacity: 0.7; transform: scale(0.6) translate(var(--dx), var(--dy)); }
+  100% { opacity: 0;   transform: scale(0)   translate(var(--dx), var(--dy)); }
+}
+
+/* ─── TAGLINE ─────────────────────────────────────────── */
+
+.hj-text {
+  position: absolute;
+  bottom: 52px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  opacity: 0;
+  animation: hj-text-in 1s 2.3s ease-out forwards;
+}
+
+@keyframes hj-text-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.hj-tagline {
+  font-family: 'Playfair Display', serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: #f0ede6;
+  letter-spacing: 0.5px;
+  margin: 0 0 8px;
+}
+
+.hj-sub {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: #e8a020;
+  margin: 0;
+}
+
+/* ─── CINEMATIC OVERLAYS ──────────────────────────────── */
+
+.hj-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 38%, rgba(6, 13, 24, 0.7) 100%);
+}
+
+/* Letterbox bars for cinematic feel */
+.hj-scene::before,
+.hj-scene::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 36px;
+  background: #060d18;
+  z-index: 2;
+  pointer-events: none;
+}
+.hj-scene::before { top: 0; }
+.hj-scene::after  { bottom: 0; }
+
+/* ─── RESPONSIVE ──────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .hj-scene  { height: 320px; }
+  .hj-hand   { width: 150px; height: 150px; }
+  .hj-hand--left  { margin-right: 60px; }
+  .hj-hand--right { margin-left:  60px; }
+  .hj-tagline { font-size: 18px; }
+  .hj-scene::before,
+  .hj-scene::after { height: 24px; }
+}

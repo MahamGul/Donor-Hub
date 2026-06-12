@@ -3,20 +3,21 @@ import { useNavigate, Link } from 'react-router-dom'
 import './Dashboard.css'
 
 const STORAGE_KEY = 'aidbridge-user'
+const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
 /* ─── Static activity data (swap with API calls later) ─── */
 const DONOR_ACTIVITY = [
-  { icon: '🍲', label: 'Food Package',      status: 'Delivered', date: 'Jun 10' },
-  { icon: '📚', label: 'Books Donation',    status: 'Pending',   date: 'Jun 9'  },
-  { icon: '🏥', label: 'Medical Kit',       status: 'Delivered', date: 'Jun 7'  },
-  { icon: '💰', label: 'Fund Transfer',     status: 'Delivered', date: 'Jun 5'  },
-  { icon: '👕', label: 'Clothing Bundle',   status: 'Pending',   date: 'Jun 3'  },
+  { icon: '🍲', label: 'Food Package',    status: 'Delivered', date: 'Jun 10' },
+  { icon: '📚', label: 'Books Donation',  status: 'Pending',   date: 'Jun 9'  },
+  { icon: '🏥', label: 'Medical Kit',     status: 'Delivered', date: 'Jun 7'  },
+  { icon: '💰', label: 'Fund Transfer',   status: 'Delivered', date: 'Jun 5'  },
+  { icon: '👕', label: 'Clothing Bundle', status: 'Pending',   date: 'Jun 3'  },
 ]
 
 const RECIPIENT_ACTIVITY = [
-  { icon: '🍲', label: 'Food Request',      status: 'Fulfilled', date: 'Jun 10' },
-  { icon: '📚', label: 'Books Request',     status: 'Pending',   date: 'Jun 9'  },
-  { icon: '💊', label: 'Medicine Request',  status: 'Fulfilled', date: 'Jun 6'  },
+  { icon: '🍲', label: 'Food Request',     status: 'Fulfilled', date: 'Jun 10' },
+  { icon: '📚', label: 'Books Request',    status: 'Pending',   date: 'Jun 9'  },
+  { icon: '💊', label: 'Medicine Request', status: 'Fulfilled', date: 'Jun 6'  },
 ]
 
 function StatusPill({ status }) {
@@ -73,12 +74,12 @@ function Dashboard() {
 
         <nav className="dash-nav">
           <span className="dash-nav__label">Menu</span>
-          <a href="#" className="dash-nav__item dash-nav__item--active">
+          <Link to="/dashboard" className="dash-nav__item dash-nav__item--active">
             <span>🏠</span> Overview
-          </a>
+          </Link>
           {isDonor ? (
             <>
-              <a href="#" className="dash-nav__item"><span>➕</span> New Donation</a>
+              <Link to="/donations/new" className="dash-nav__item"><span>➕</span> New Donation</Link>
               <a href="#" className="dash-nav__item"><span>📦</span> My Donations</a>
               <a href="#" className="dash-nav__item"><span>📊</span> Impact</a>
             </>
@@ -188,12 +189,18 @@ function Dashboard() {
             <h2>{isDonor ? 'Ready to donate again?' : 'Need something else?'}</h2>
             <p>{isDonor
               ? 'Your generosity reaches people who truly need it.'
-              : 'Submit a new aid request and we\'ll match you with a donor.'
+              : "Submit a new aid request and we'll match you with a donor."
             }</p>
           </div>
-          <button className="dash-action__btn">
-            {isDonor ? '+ New Donation' : '+ New Request'}
-          </button>
+          {isDonor ? (
+            <Link to="/donations/new" className="dash-action__btn">
+              + New Donation
+            </Link>
+          ) : (
+            <button className="dash-action__btn">
+              + New Request
+            </button>
+          )}
         </section>
 
         {/* Recent activity */}

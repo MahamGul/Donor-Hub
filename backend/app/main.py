@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
-from typing import List
+from typing import List, Dict, Any
 from secrets import token_urlsafe
 
 from . import db
@@ -19,6 +19,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# =========================
+# MODELS
+# =========================
 
 class Health(BaseModel):
     status: str
@@ -51,11 +55,35 @@ class LoginResponse(BaseModel):
     token_type: str
     user: UserOut
 
+
 class SignupIn(BaseModel):
     name: str
     email: EmailStr
     password: str
     role: str
+
+
+# =========================
+# DONATION MODELS
+# =========================
+
+class DonationIn(BaseModel):
+    donorId: str
+    category: str
+    title: str
+    description: str
+    details: Dict[str, Any]
+
+
+class DonationOut(DonationIn):
+    id: str
+    status: str
+    createdAt: str
+
+
+# =========================
+# STARTUP / SHUTDOWN
+# =========================
 
 @app.on_event("startup")
 async def startup_event():
@@ -67,39 +95,67 @@ async def shutdown_event():
     await db.close_mongo_connection()
 
 
+# =========================
+# BASIC ROUTES
+# =========================
+
 @app.get("/")
 async def read_root():
-    return {"message": "Donor Hub backend running"}
+    return {
+        "message": "Donor Hub backend running"
+    }
 
 
 @app.get("/health", response_model=Health)
 async def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok"
+    }
 
+
+# =========================
+# DONOR ROUTES
+# =========================
 
 @app.get("/donors", response_model=List[DonorOut])
 async def list_donors():
+
     docs = await db.get_donors()
+
     return docs
 
 
 @app.post("/donors", response_model=DonorOut)
-async def create_donor(donor: DonorIn):
-    doc = donor.dict()
+async def create_donor(
+    donor: DonorIn
+):
 
-    new = await db.create_donor(doc)
+    donor_data = donor.dict()
 
-    if not new:
+    new_donor = await db.create_donor(
+        donor_data
+    )
+
+    if not new_donor:
         raise HTTPException(
             status_code=500,
             detail="Failed to create donor"
         )
 
-    return new
+    return new_donor
 
 
-@app.post("/login", response_model=LoginResponse)
-async def login(auth: AuthIn):
+# =========================
+# LOGIN
+# =========================
+
+@app.post(
+    "/login",
+    response_model=LoginResponse
+)
+async def login(
+    auth: AuthIn
+):
 
     user_doc = await db.get_user_document_by_email(
         auth.email
@@ -111,7 +167,10 @@ async def login(auth: AuthIn):
             detail="Invalid email or password"
         )
 
-    password_hash = user_doc.get("password", "")
+    password_hash = user_doc.get(
+        "password",
+        ""
+    )
 
     if not db.verify_password(
         auth.password,
@@ -141,14 +200,22 @@ async def login(auth: AuthIn):
     return {
         "access_token": token_urlsafe(32),
         "token_type": "bearer",
-        "user": user,
+        "user": user
     }
 
-@app.post("/signup")
-async def signup(user: SignupIn):
 
-    # check if user exists
-    existing_user = await db.get_user_document_by_email(user.email)
+# =========================
+# SIGNUP
+# =========================
+
+@app.post("/signup")
+async def signup(
+    user: SignupIn
+):
+
+    existing_user = await db.get_user_document_by_email(
+        user.email
+    )
 
     if existing_user:
         raise HTTPException(
@@ -156,14 +223,13 @@ async def signup(user: SignupIn):
             detail="User already exists with this email"
         )
 
-    # prepare data
     user_dict = user.dict()
 
-    # store password directly (temporary)
     user_dict["password"] = user.password
 
-    # save to DB
-    new_user = await db.create_user(user_dict)
+    new_user = await db.create_user(
+        user_dict
+    )
 
     if not new_user:
         raise HTTPException(
@@ -174,4 +240,68 @@ async def signup(user: SignupIn):
     return {
         "message": "User created successfully",
         "user": new_user
+    }
+
+
+# =========================
+# DONATIONS
+# =========================
+
+@app.post("/donations")
+async def create_donation(
+    donation: DonationIn
+):
+
+    donation_dict = donation.dict()
+
+    new_donation = await db.create_donation(
+        donation_dict
+    )
+
+    if not new_donation:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to create donation"
+        )
+
+    return new_donation
+
+
+@app.get("/donations")
+async def get_donations():
+
+    donations = await db.get_donations()
+
+    return donations
+
+
+@app.get("/donations/donor/{donor_id}")
+async def get_donor_donations(
+    donor_id: str
+):
+
+    donations = await db.get_donations_by_donor(
+        donor_id
+    )
+
+    return donations
+
+
+@app.delete("/donations/{donation_id}")
+async def delete_donation(
+    donation_id: str
+):
+
+    deleted = await db.delete_donation(
+        donation_id
+    )
+
+    if not deleted:
+        raise HTTPException(
+            status_code=404,
+            detail="Donation not found"
+        )
+
+    return {
+        "message": "Donation deleted"
     }

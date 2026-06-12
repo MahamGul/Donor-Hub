@@ -1,10 +1,11 @@
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 
-import Login from './pages/Login'
-import Signup from './pages/Signup'
-import Dashboard from './pages/Dashboard'
-import Home from './pages/Home'
+import Login       from './pages/Login'
+import Signup      from './pages/Signup'
+import Dashboard   from './pages/Dashboard'
+import Home        from './pages/Home'
+import NewDonation from './pages/Newdonations'
 
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -24,6 +25,15 @@ function App() {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/donations/new"
+        element={
+          <ProtectedRoute>
+            <NewDonation />
           </ProtectedRoute>
         }
       />
