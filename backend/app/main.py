@@ -305,3 +305,289 @@ async def delete_donation(
     return {
         "message": "Donation deleted"
     }
+
+# =========================
+# REQUEST MODELS
+# =========================
+
+class RequestIn(BaseModel):
+    recipientId: str
+    category: str
+    details: Dict[str, Any]
+
+
+class RequestOut(BaseModel):
+    id: str
+    recipientId: str
+    category: str
+    details: Dict[str, Any]
+    status: str
+    createdAt: str
+    matchedDonationId: str | None = None
+    message: str | None = None
+
+
+# =========================
+# BLOOD COMPATIBILITY
+# =========================
+
+# Maps recipient blood type -> list of donor blood types they can RECEIVE from
+BLOOD_COMPATIBILITY = {
+    "O-":  ["O-"],
+    "O+":  ["O-", "O+"],
+    "A-":  ["O-", "A-"],
+    "A+":  ["O-", "O+", "A-", "A+"],
+    "B-":  ["O-", "B-"],
+    "B+":  ["O-", "O+", "B-", "B+"],
+    "AB-": ["O-", "A-", "B-", "AB-"],
+    "AB+": ["O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"],
+}
+
+
+# =========================
+# REQUEST ROUTES
+# =========================
+
+@app.get("/requests", response_model=List[RequestOut])
+async def list_requests():
+    return await db.get_requests()
+
+
+@app.get("/requests/recipient/{recipient_id}", response_model=List[RequestOut])
+async def list_recipient_requests(recipient_id: str):
+    return await db.get_requests_by_recipient(recipient_id)
+
+
+@app.post("/requests", response_model=RequestOut)
+async def create_request(req: RequestIn):
+
+    category = req.category
+    details = req.details
+    recipient_id = req.recipientId
+
+    # ---------- FOOD ----------
+    if category == "Food":
+        available = await db.get_donations_by_category("Food")
+        # pick first donation with quantity > 0
+        match = next(
+            (d for d in available if d["details"].get("quantity", 0) > 0),
+            None
+        )
+        if not match:
+            raise HTTPException(status_code=404, detail="No food packages currently available")
+
+        await db.decrement_food_package(match["id"])
+
+        granted_details = {
+            "items": match["details"].get("items", []),
+            "expiryDate": match["details"].get("expiryDate"),
+            "frozen": match["details"].get("frozen", False),
+            "packagesGranted": 1,
+        }
+
+        new_request = await db.create_request({
+            "recipientId": recipient_id,
+            "category": category,
+            "details": granted_details,
+            "matchedDonationId": match["id"],
+            "message": "1 food package granted",
+        })
+
+    # ---------- FUNDS ----------
+    elif category == "Funds":
+        bank_details = details.get("bankDetails")
+        if not bank_details:
+            raise HTTPException(status_code=400, detail="Bank details are required")
+
+        available = await db.get_donations_by_category("Funds")
+        total_available = sum(d["details"].get("amount", 0) for d in available)
+
+        if total_available <= 0:
+            raise HTTPException(status_code=404, detail="No funds currently available")
+
+        ALLOC_CAP = 5000
+        allocated = min(ALLOC_CAP, total_available)
+        remaining_to_allocate = allocated
+        sources = []
+
+        for d in available:
+            if remaining_to_allocate <= 0:
+                break
+            d_amount = d["details"].get("amount", 0)
+            if d_amount <= 0:
+                continue
+
+            take = min(d_amount, remaining_to_allocate)
+            new_amount = d_amount - take
+            await db.update_donation_amount(d["id"], new_amount)
+
+            sources.append({"donationId": d["id"], "amount": take})
+            remaining_to_allocate -= take
+
+        granted_details = {
+            "amountGranted": allocated,
+            "bankDetails": bank_details,
+            "sources": sources,
+        }
+
+        new_request = await db.create_request({
+            "recipientId": recipient_id,
+            "category": category,
+            "details": granted_details,
+            "matchedDonationId": sources[0]["donationId"] if sources else None,
+            "message": f"PKR {allocated} allocated to your account",
+        })
+
+    # ---------- EDUCATION ----------
+    elif category == "Education":
+        subject = details.get("subject")
+        grade = details.get("grade")
+        if not subject or not grade:
+            raise HTTPException(status_code=400, detail="Subject and grade are required")
+
+        available = await db.get_donations_by_category("Education")
+
+        def matches(d):
+            d_grade = d["details"].get("grade")
+            d_subjects = [s.lower() for s in d["details"].get("subjects", [])]
+            grade_match = (d_grade == grade) or (d_grade == "All levels")
+            subject_match = (not d_subjects) or (subject.lower() in d_subjects)
+            return grade_match and subject_match
+
+        match = next((d for d in available if matches(d)), None)
+
+        if not match:
+            raise HTTPException(status_code=404, detail="No matching books currently available")
+
+        await db.mark_donation_fulfilled(match["id"])
+
+        granted_details = {
+            "bookCount": match["details"].get("bookCount"),
+            "grade": match["details"].get("grade"),
+            "subjects": match["details"].get("subjects", []),
+            "requestedSubject": subject,
+            "requestedGrade": grade,
+        }
+
+        new_request = await db.create_request({
+            "recipientId": recipient_id,
+            "category": category,
+            "details": granted_details,
+            "matchedDonationId": match["id"],
+            "message": f"{match['details'].get('bookCount')} book(s) granted",
+        })
+
+    # ---------- BLOOD ----------
+    elif category == "Blood":
+        recipient_blood = details.get("bloodGroup")
+        if not recipient_blood:
+            raise HTTPException(status_code=400, detail="Blood group is required")
+
+        compatible_donors = BLOOD_COMPATIBILITY.get(recipient_blood)
+        if compatible_donors is None:
+            raise HTTPException(status_code=400, detail="Invalid blood group")
+
+        available = await db.get_donations_by_category("Blood")
+        match = next(
+            (d for d in available if d["details"].get("bloodGroup") in compatible_donors),
+            None
+        )
+
+        if not match:
+            raise HTTPException(
+                status_code=404,
+                detail=f"No compatible blood donor currently available for {recipient_blood}"
+            )
+
+        await db.mark_donation_fulfilled(match["id"])
+
+        granted_details = {
+            "recipientBloodGroup": recipient_blood,
+            "donorBloodGroup": match["details"].get("bloodGroup"),
+            "city": match["details"].get("city"),
+            "hospitalPreference": match["details"].get("hospitalPreference"),
+        }
+
+        new_request = await db.create_request({
+            "recipientId": recipient_id,
+            "category": category,
+            "details": granted_details,
+            "matchedDonationId": match["id"],
+            "message": f"Compatible donor found ({match['details'].get('bloodGroup')})",
+        })
+
+    # ---------- CLOTHES ----------
+    elif category == "Clothes":
+        clothes_type = details.get("type")  # e.g. "Winter"/"Summer"/gender etc
+        size = details.get("size")
+        if not clothes_type:
+            raise HTTPException(status_code=400, detail="Clothing type (e.g. Winter/Summer/gender) is required")
+
+        available = await db.get_donations_by_category("Clothes")
+
+        def matches(d):
+            d_type = d["details"].get("type")
+            type_match = (d_type == clothes_type) or (d_type == "All-season")
+            size_match = (not size) or (d["details"].get("size") == size) or (d["details"].get("size") == "Mixed")
+            return type_match and size_match
+
+        match = next((d for d in available if matches(d)), None)
+
+        if not match:
+            raise HTTPException(status_code=404, detail="No matching clothes currently available")
+
+        await db.mark_donation_fulfilled(match["id"])
+
+        granted_details = {
+            "type": match["details"].get("type"),
+            "size": match["details"].get("size"),
+            "quantity": match["details"].get("quantity"),
+        }
+
+        new_request = await db.create_request({
+            "recipientId": recipient_id,
+            "category": category,
+            "details": granted_details,
+            "matchedDonationId": match["id"],
+            "message": f"{match['details'].get('quantity')} item(s) granted",
+        })
+
+    # ---------- MEDICINE ----------
+    elif category == "Medicine":
+        medicine_name = details.get("medicineName")
+        if not medicine_name:
+            raise HTTPException(status_code=400, detail="Medicine name is required")
+
+        available = await db.get_donations_by_category("Medicine")
+        match = next(
+            (d for d in available
+             if d["details"].get("medicineName", "").strip().lower() == medicine_name.strip().lower()),
+            None
+        )
+
+        if not match:
+            raise HTTPException(status_code=404, detail=f"'{medicine_name}' is not currently available")
+
+        await db.mark_donation_fulfilled(match["id"])
+
+        granted_details = {
+            "medicineName": match["details"].get("medicineName"),
+            "quantity": match["details"].get("quantity"),
+            "expiryDate": match["details"].get("expiryDate"),
+        }
+
+        new_request = await db.create_request({
+            "recipientId": recipient_id,
+            "category": category,
+            "details": granted_details,
+            "matchedDonationId": match["id"],
+            "message": f"{match['details'].get('medicineName')} granted",
+        })
+
+    else:
+        raise HTTPException(status_code=400, detail="Invalid category")
+
+    if not new_request:
+        raise HTTPException(status_code=500, detail="Failed to create request")
+
+    return new_request

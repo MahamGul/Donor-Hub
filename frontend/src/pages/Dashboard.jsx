@@ -85,7 +85,7 @@ function Dashboard() {
             </>
           ) : (
             <>
-              <a href="#" className="dash-nav__item"><span>🙋</span> New Request</a>
+              <Link to="/requests/new" className="dash-nav__item"><span>🙋</span> New Request</Link>
               <a href="#" className="dash-nav__item"><span>📋</span> My Requests</a>
               <a href="#" className="dash-nav__item"><span>🔍</span> Browse Donations</a>
             </>
@@ -197,9 +197,9 @@ function Dashboard() {
               + New Donation
             </Link>
           ) : (
-            <button className="dash-action__btn">
+            <Link to="/requests/new" className="dash-action__btn">
               + New Request
-            </button>
+            </Link>
           )}
         </section>
 

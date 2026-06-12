@@ -6,6 +6,7 @@ import Signup      from './pages/Signup'
 import Dashboard   from './pages/Dashboard'
 import Home        from './pages/Home'
 import NewDonation from './pages/Newdonations'
+import NewRequest  from './pages/NewRequest'
 
 import ProtectedRoute from './components/ProtectedRoute'
 
@@ -34,6 +35,15 @@ function App() {
         element={
           <ProtectedRoute>
             <NewDonation />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/requests/new"
+        element={
+          <ProtectedRoute>
+            <NewRequest />
           </ProtectedRoute>
         }
       />

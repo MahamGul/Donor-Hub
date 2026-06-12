@@ -136,3 +136,100 @@ async def delete_donation(donation_id: str) -> bool:
         return False
     result = await _db.donations.delete_one({"_id": oid})
     return result.deleted_count > 0
+
+
+async def get_donations_by_category(category: str, status: str = "available") -> List[Dict[str, Any]]:
+    await connect_to_mongo()
+    cursor = _db.donations.find({"category": category, "status": status})
+    docs = []
+    async for doc in cursor:
+        docs.append(_serialize(doc))
+    return docs
+
+
+async def decrement_food_package(donation_id: str) -> Optional[Dict[str, Any]]:
+    """Decrement quantity by 1; if it hits 0, mark as fulfilled."""
+    await connect_to_mongo()
+    try:
+        oid = ObjectId(donation_id)
+    except Exception:
+        return None
+
+    donation = await _db.donations.find_one({"_id": oid})
+    if not donation:
+        return None
+
+    current_qty = donation["details"].get("quantity", 0)
+    if current_qty <= 0:
+        return None
+
+    new_qty = current_qty - 1
+    update = {"$set": {"details.quantity": new_qty}}
+    if new_qty == 0:
+        update["$set"]["status"] = "fulfilled"
+
+    await _db.donations.update_one({"_id": oid}, update)
+
+    donation["details"]["quantity"] = new_qty
+    if new_qty == 0:
+        donation["status"] = "fulfilled"
+
+    return _serialize(donation)
+
+
+async def mark_donation_fulfilled(donation_id: str) -> None:
+    await connect_to_mongo()
+    try:
+        oid = ObjectId(donation_id)
+    except Exception:
+        return
+    await _db.donations.update_one(
+        {"_id": oid},
+        {"$set": {"status": "fulfilled"}}
+    )
+
+
+async def update_donation_amount(donation_id: str, new_amount: float) -> None:
+    """For partial fund allocation: reduce remaining amount, mark fulfilled if zero."""
+    await connect_to_mongo()
+    try:
+        oid = ObjectId(donation_id)
+    except Exception:
+        return
+    update = {"$set": {"details.amount": new_amount}}
+    if new_amount <= 0:
+        update["$set"]["status"] = "fulfilled"
+    await _db.donations.update_one({"_id": oid}, update)
+
+
+# =========================
+# REQUESTS
+# =========================
+
+async def get_requests() -> List[Dict[str, Any]]:
+    await connect_to_mongo()
+    cursor = _db.requests.find({})
+    docs = []
+    async for doc in cursor:
+        docs.append(_serialize(doc))
+    return docs
+
+
+async def get_requests_by_recipient(recipient_id: str) -> List[Dict[str, Any]]:
+    await connect_to_mongo()
+    cursor = _db.requests.find({"recipientId": recipient_id})
+    docs = []
+    async for doc in cursor:
+        docs.append(_serialize(doc))
+    return docs
+
+
+async def create_request(request_dict: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    await connect_to_mongo()
+    request_dict.setdefault("status", "granted")
+    request_dict.setdefault("createdAt", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    res = await _db.requests.insert_one(request_dict)
+    new = await _db.requests.find_one({"_id": res.inserted_id})
+    if new:
+        return _serialize(new)
+    return None
