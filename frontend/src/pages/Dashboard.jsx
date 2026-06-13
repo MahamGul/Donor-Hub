@@ -138,76 +138,15 @@ function Overview({ donations, onNav }) {
 }
 
 function RecipientDashboard({ user }) {
-  const [activeView, setActiveView] = useState('overview')
   const navigate = useNavigate()
 
   const menu = [
-    { id: 'overview', icon: '🏠', label: 'Overview' },
-    { id: 'requests', icon: '📋', label: 'My Requests' },
+    { id: 'overview', icon: '🏠', label: 'Overview', active: true },
+    { id: 'requests', icon: '📋', label: 'My Requests', link: '/requests/my' },
     { id: 'new', icon: '➕', label: 'New Request', link: '/requests/new' },
-    { id: 'browse', icon: '🔍', label: 'Browse' },
-    { id: 'settings', icon: '⚙️', label: 'Settings' },
+    { id: 'track', icon: '🚚', label: 'Track Requests', link: '/requests/track' },
+    { id: 'settings', icon: '⚙️', label: 'Settings', link: '/settings' },
   ]
-
-  const content = () => {
-    if (activeView === 'overview') {
-      return (
-        <>
-          <section className="dash-stats">
-            <div className="dash-stat-card">
-              <span className="dash-stat-card__icon">📬</span>
-              <div><p className="dash-stat-card__label">Requests Made</p><p className="dash-stat-card__num">—</p></div>
-            </div>
-            <div className="dash-stat-card">
-              <span className="dash-stat-card__icon">⏳</span>
-              <div><p className="dash-stat-card__label">Pending</p><p className="dash-stat-card__num">—</p></div>
-            </div>
-            <div className="dash-stat-card">
-              <span className="dash-stat-card__icon">✅</span>
-              <div><p className="dash-stat-card__label">Fulfilled</p><p className="dash-stat-card__num">—</p></div>
-            </div>
-          </section>
-
-          <section className="dash-action">
-            <div className="dash-action__text">
-              <h2>Need aid?</h2>
-              <p>Submit a new request and we’ll match you with available donations as soon as possible.</p>
-            </div>
-            <button className="dash-action__btn" onClick={() => navigate('/requests/new')}>+ New Request</button>
-          </section>
-        </>
-      )
-    }
-
-    if (activeView === 'requests') {
-      return (
-        <div className="dash-panel">
-          <h2 className="dash-panel__title">My Requests</h2>
-          <p className="dash-panel__sub">Your active requests will appear here.</p>
-          <div className="dash-empty-state">
-            <span>📭</span>
-            <p>You haven’t made any requests yet.</p>
-          </div>
-        </div>
-      )
-    }
-
-    if (activeView === 'browse') {
-      return (
-        <div className="dash-panel">
-          <h2 className="dash-panel__title">Browse Donations</h2>
-          <p className="dash-panel__sub">Browse available donations once this feature is enabled.</p>
-        </div>
-      )
-    }
-
-    return (
-      <div className="dash-panel">
-        <h2 className="dash-panel__title">Settings</h2>
-        <p className="dash-panel__sub">Manage your account settings from this page.</p>
-      </div>
-    )
-  }
 
   return (
     <div className="dash-root">
@@ -221,13 +160,9 @@ function RecipientDashboard({ user }) {
                 <span>{item.icon}</span>{item.label}
               </Link>
             ) : (
-              <button
-                key={item.id}
-                className={`dash-nav__item ${activeView === item.id ? 'dash-nav__item--active' : ''}`}
-                onClick={() => setActiveView(item.id)}
-              >
+              <span key={item.id} className="dash-nav__item dash-nav__item--active">
                 <span>{item.icon}</span>{item.label}
-              </button>
+              </span>
             )
           ))}
         </nav>
@@ -251,7 +186,28 @@ function RecipientDashboard({ user }) {
           </div>
         </header>
 
-        {content()}
+        <section className="dash-stats">
+          <div className="dash-stat-card">
+            <span className="dash-stat-card__icon">📬</span>
+            <div><p className="dash-stat-card__label">Requests Made</p><p className="dash-stat-card__num">—</p></div>
+          </div>
+          <div className="dash-stat-card">
+            <span className="dash-stat-card__icon">⏳</span>
+            <div><p className="dash-stat-card__label">Pending</p><p className="dash-stat-card__num">—</p></div>
+          </div>
+          <div className="dash-stat-card">
+            <span className="dash-stat-card__icon">✅</span>
+            <div><p className="dash-stat-card__label">Fulfilled</p><p className="dash-stat-card__num">—</p></div>
+          </div>
+        </section>
+
+        <section className="dash-action">
+          <div className="dash-action__text">
+            <h2>Need aid?</h2>
+            <p>Submit a new request and we'll match you with available donations as soon as possible.</p>
+          </div>
+          <Link to="/requests/new" className="dash-action__btn">+ New Request</Link>
+        </section>
       </main>
     </div>
   )

@@ -238,11 +238,11 @@ export default function NewRequest() {
   }
 
   const handleCatSelect = (c) => {
-  setCat(c)
-  setForm({ details: {} })
-  setError('')
-  setStep(2)
-}
+    setCat(c)
+    setForm({ details: {} })
+    setError('')
+    setStep(2)
+  }
 
   const handleDetailChange = (field, value) => {
     setForm(prev => ({ ...prev, details: { ...prev.details, [field]: value } }))
@@ -413,9 +413,10 @@ function Sidebar({ user, navigate }) {
       <nav className="dash-nav">
         <span className="dash-nav__label">Menu</span>
         <Link to="/dashboard" className="dash-nav__item"><span>🏠</span> Overview</Link>
+        <Link to="/requests/my" className="dash-nav__item"><span>📋</span> My Requests</Link>
         <Link to="/requests/new" className="dash-nav__item dash-nav__item--active"><span>➕</span> New Request</Link>
-        <a href="#" className="dash-nav__item"><span>📋</span> My Requests</a>
-        <a href="#" className="dash-nav__item"><span>⚙️</span> Settings</a>
+        <Link to="/requests/track" className="dash-nav__item"><span>🚚</span> Track Requests</Link>
+        <Link to="/settings" className="dash-nav__item"><span>⚙️</span> Settings</Link>
       </nav>
       <button className="dash-logout" onClick={handleLogout}>Sign Out</button>
     </aside>
