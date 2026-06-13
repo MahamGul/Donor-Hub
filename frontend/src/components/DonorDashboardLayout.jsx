@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { id: 'donations', icon: '📦', label: 'My Donations', link: '/dashboard/donations' },
   { id: 'new',       icon: '➕', label: 'New Donation', link: '/donations/new' },
   { id: 'impact',    icon: '📊', label: 'Impact',       link: '/dashboard/impact' },
+  { id: 'feedback',  icon: '💬', label: 'Feedback',     link: '/feedback' },
   { id: 'settings',  icon: '⚙️', label: 'Settings',     link: '/dashboard/settings' },
 ]
 

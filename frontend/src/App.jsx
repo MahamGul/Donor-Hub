@@ -13,6 +13,16 @@ import MyRequests from './pages/MyRequests'
 import Track from './pages/Track'
 import Settings from './pages/Settings'
 import ProtectedRoute from './components/ProtectedRoute'
+import RecipientFeedback from './pages/RecipientFeedback'
+import DonorFeedback from './pages/DonorFeedback'
+
+// A small wrapper that picks the right page based on stored user role
+function Feedback() {
+  const saved = localStorage.getItem('aidbridge-user')
+  const user = saved ? JSON.parse(saved) : null
+  if (!user) return <Navigate to="/login/donor" replace />
+  return user.role === 'donor' ? <DonorFeedback /> : <RecipientFeedback />
+}
 
 function App() {
   return (
@@ -34,7 +44,7 @@ function App() {
       <Route path="/requests/track" element={<ProtectedRoute><Track /></ProtectedRoute>} />
 
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-
+      <Route path="/feedback" element={<ProtectedRoute><Feedback /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

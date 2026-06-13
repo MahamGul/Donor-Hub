@@ -622,3 +622,76 @@ async def create_request(req: RequestIn):
         raise HTTPException(status_code=500, detail="Failed to create request")
 
     return new_request
+
+# =========================
+# FEEDBACK MODELS
+# =========================
+
+class FeedbackIn(BaseModel):
+    recipientId: str
+    donorId: str | None = None
+    requestId: str | None = None
+    comment: str
+    anonymous: bool = False
+
+
+class FeedbackOut(BaseModel):
+    id: str
+    recipientId: str
+    donorId: str | None = None
+    requestId: str | None = None
+    comment: str
+    anonymous: bool
+    recipientName: str | None = None
+    createdAt: str
+
+
+# =========================
+# FEEDBACK ROUTES
+# =========================
+
+@app.post("/feedback", response_model=FeedbackOut)
+async def create_feedback(fb: FeedbackIn):
+
+    if not fb.comment.strip():
+        raise HTTPException(status_code=400, detail="Feedback comment cannot be empty")
+
+    recipient_name = None
+    if not fb.anonymous:
+        recipient = await db.get_user_by_id(fb.recipientId)
+        if recipient:
+            recipient_name = recipient.get("name")
+
+    # If feedback is tied to a request, derive donorId from the matched donation
+    donor_id = fb.donorId
+    if not donor_id and fb.requestId:
+        donor_id = await db.get_donor_id_for_request(fb.requestId)
+
+    new_feedback = await db.create_feedback({
+        "recipientId": fb.recipientId,
+        "donorId": donor_id,
+        "requestId": fb.requestId,
+        "comment": fb.comment.strip(),
+        "anonymous": fb.anonymous,
+        "recipientName": recipient_name,
+    })
+
+    if not new_feedback:
+        raise HTTPException(status_code=500, detail="Failed to submit feedback")
+
+    return new_feedback
+
+
+@app.get("/feedback/donor/{donor_id}", response_model=List[FeedbackOut])
+async def list_donor_feedback(donor_id: str):
+    return await db.get_feedback_by_donor(donor_id)
+
+
+@app.get("/feedback/recipient/{recipient_id}", response_model=List[FeedbackOut])
+async def list_recipient_feedback(recipient_id: str):
+    return await db.get_feedback_by_recipient(recipient_id)
+
+
+@app.get("/feedback", response_model=List[FeedbackOut])
+async def list_all_feedback():
+    return await db.get_all_feedback()

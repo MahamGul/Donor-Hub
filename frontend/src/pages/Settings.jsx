@@ -373,8 +373,9 @@ function Sidebar({ user, navigate, isDonor }) {
         ) : (
           <>
             <Link to="/requests/my" className="dash-nav__item"><span>📋</span> My Requests</Link>
-            <Link to="/requests/new" className="dash-nav__item"><span>➕</span> New Request</Link>
-            <Link to="/requests/track" className="dash-nav__item"><span>🚚</span> Track Requests</Link>
+<Link to="/requests/new" className="dash-nav__item"><span>➕</span> New Request</Link>
+<Link to="/requests/track" className="dash-nav__item"><span>🚚</span> Track Requests</Link>
+<Link to="/feedback" className="dash-nav__item"><span>💬</span> Feedback</Link>
           </>
         )}
         <Link to="/settings" className="dash-nav__item dash-nav__item--active"><span>⚙️</span> Settings</Link>

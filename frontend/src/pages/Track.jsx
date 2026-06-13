@@ -224,10 +224,11 @@ function Sidebar({ user, navigate }) {
       <nav className="dash-nav">
         <span className="dash-nav__label">Menu</span>
         <Link to="/dashboard" className="dash-nav__item"><span>🏠</span> Overview</Link>
-        <Link to="/requests/my" className="dash-nav__item"><span>📋</span> My Requests</Link>
-        <Link to="/requests/new" className="dash-nav__item"><span>➕</span> New Request</Link>
-        <Link to="/requests/track" className="dash-nav__item dash-nav__item--active"><span>🚚</span> Track Requests</Link>
-        <Link to="/settings" className="dash-nav__item"><span>⚙️</span> Settings</Link>
+<Link to="/requests/my" className="dash-nav__item"><span>📋</span> My Requests</Link>
+<Link to="/requests/new" className="dash-nav__item"><span>➕</span> New Request</Link>
+<Link to="/requests/track" className="dash-nav__item dash-nav__item--active"><span>🚚</span> Track Requests</Link>
+<Link to="/feedback" className="dash-nav__item"><span>💬</span> Feedback</Link>
+<Link to="/settings" className="dash-nav__item"><span>⚙️</span> Settings</Link>
       </nav>
       <button className="dash-logout" onClick={handleLogout}>Sign Out</button>
     </aside>

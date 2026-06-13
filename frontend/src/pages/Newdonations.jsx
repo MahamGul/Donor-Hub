@@ -5,14 +5,6 @@ import './Newdonations.css'
 const STORAGE_KEY = 'aidbridge-user'
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
-/* ─────────────────────────────────────────────────────────────
-   Each category defines:
-     - id       → sent as "category" to the API
-     - icon / label → UI
-     - renderFields(form, onChange) → returns JSX for that category's
-       detail fields, writing into form.details via onChange(key, val)
-───────────────────────────────────────────────────────────── */
-
 const CATEGORIES = [
   {
     id: 'Food',
@@ -655,6 +647,7 @@ function Sidebar({ user, navigate }) {
         <Link to="/donations/new" className="dash-nav__item dash-nav__item--active"><span>➕</span> New Donation</Link>
         <Link to="/dashboard/donations" className="dash-nav__item"><span>📦</span> My Donations</Link>
         <Link to="/dashboard/impact" className="dash-nav__item"><span>📊</span> Impact</Link>
+        <Link to="/feedback" className="dash-nav__item"><span>💬</span> Feedback</Link>
         <Link to="/dashboard/settings" className="dash-nav__item"><span>⚙️</span> Settings</Link>
       </nav>
       <button className="dash-logout" onClick={handleLogout}>Sign Out</button>

@@ -266,3 +266,63 @@ async def create_request(request_dict: Dict[str, Any]) -> Optional[Dict[str, Any
     if new:
         return _serialize(new)
     return None
+
+# =========================
+# FEEDBACK
+# =========================
+
+async def create_feedback(feedback_dict: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    await connect_to_mongo()
+    feedback_dict.setdefault("createdAt", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    res = await _db.feedback.insert_one(feedback_dict)
+    new = await _db.feedback.find_one({"_id": res.inserted_id})
+    if new:
+        return _serialize(new)
+    return None
+
+
+async def get_feedback_by_donor(donor_id: str) -> List[Dict[str, Any]]:
+    await connect_to_mongo()
+    cursor = _db.feedback.find({"donorId": donor_id})
+    docs = []
+    async for doc in cursor:
+        docs.append(_serialize(doc))
+    return docs
+
+
+async def get_feedback_by_recipient(recipient_id: str) -> List[Dict[str, Any]]:
+    await connect_to_mongo()
+    cursor = _db.feedback.find({"recipientId": recipient_id})
+    docs = []
+    async for doc in cursor:
+        docs.append(_serialize(doc))
+    return docs
+
+
+async def get_all_feedback() -> List[Dict[str, Any]]:
+    await connect_to_mongo()
+    cursor = _db.feedback.find({})
+    docs = []
+    async for doc in cursor:
+        docs.append(_serialize(doc))
+    return docs
+
+
+async def get_donor_id_for_request(request_id: str) -> Optional[str]:
+    """Given a request, find the matched donation's donorId."""
+    await connect_to_mongo()
+    try:
+        oid = ObjectId(request_id)
+    except Exception:
+        return None
+    req = await _db.requests.find_one({"_id": oid})
+    if not req or not req.get("matchedDonationId"):
+        return None
+    try:
+        donation_oid = ObjectId(req["matchedDonationId"])
+    except Exception:
+        return None
+    donation = await _db.donations.find_one({"_id": donation_oid})
+    if not donation:
+        return None
+    return donation.get("donorId")

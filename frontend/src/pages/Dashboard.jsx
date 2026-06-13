@@ -145,6 +145,7 @@ function RecipientDashboard({ user }) {
     { id: 'requests', icon: '📋', label: 'My Requests', link: '/requests/my' },
     { id: 'new', icon: '➕', label: 'New Request', link: '/requests/new' },
     { id: 'track', icon: '🚚', label: 'Track Requests', link: '/requests/track' },
+    { id: 'feedback', icon: '💬', label: 'Feedback', link: '/feedback' },
     { id: 'settings', icon: '⚙️', label: 'Settings', link: '/settings' },
   ]
 
