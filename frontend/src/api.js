@@ -41,6 +41,16 @@ export async function getDonorDonations(donorId) {
   return response.data
 }
 
+export async function getUser(userId) {
+  const response = await client.get(`/users/${userId}`)
+  return response.data
+}
+
+export async function updateUser(userId, data) {
+  const response = await client.put(`/users/${userId}`, data)
+  return response.data
+}
+
 /**
  * Fetch all donations (admin / matching use).
  */

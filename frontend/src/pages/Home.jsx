@@ -2,7 +2,6 @@ import React from 'react'
 
 import Navbar from '../components/Navbar'
 import Hero from '../components/Hero'
-import HandsAnimation from '../components/HandsAnimations'  // ← add this
 import HowItWorks from '../components/Howitworks'
 import DonationCard from '../components/DonationCard'
 import CTABand from '../components/CTABand'
@@ -15,7 +14,6 @@ function Home() {
     <>
       <Navbar />
       <Hero />
-      <HandsAnimation />   {/* ← add this */}
       <HowItWorks />
       <DonationCard />
       <CTABand />

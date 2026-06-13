@@ -77,6 +77,20 @@ async def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
     return doc
 
 
+async def get_user_by_id(user_id: str) -> Optional[Dict[str, Any]]:
+    await connect_to_mongo()
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        return None
+    doc = await _db.users.find_one({"_id": oid})
+    if not doc:
+        return None
+    doc = _serialize(doc)
+    doc.pop("password", None)
+    return doc
+
+
 async def get_user_document_by_email(email: str) -> Optional[Dict[str, Any]]:
     """Returns the raw document including password hash — internal use only."""
     await connect_to_mongo()
@@ -95,6 +109,25 @@ async def create_user(user: Dict[str, Any]) -> Dict[str, Any]:
     new = _serialize(new)
     new.pop("password", None)
     return new
+
+
+async def update_user(user_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    await connect_to_mongo()
+    try:
+        oid = ObjectId(user_id)
+    except Exception:
+        return None
+
+    # Prevent password updates through this endpoint
+    update_data.pop("password", None)
+
+    await _db.users.update_one({"_id": oid}, {"$set": update_data})
+    updated = await _db.users.find_one({"_id": oid})
+    if not updated:
+        return None
+    updated = _serialize(updated)
+    updated.pop("password", None)
+    return updated
 
 
 # =========================

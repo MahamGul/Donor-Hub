@@ -3,7 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import './Auth.css'
 
 const STORAGE_KEY = 'aidbridge-user'
-const API_BASE    = 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
 function Login() {
   const navigate       = useNavigate()

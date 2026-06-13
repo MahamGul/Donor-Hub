@@ -651,11 +651,11 @@ function Sidebar({ user, navigate }) {
       <Link to="/" className="dash-logo">Aid<span>Bridge</span></Link>
       <nav className="dash-nav">
         <span className="dash-nav__label">Menu</span>
-        <Link to="/dashboard"     className="dash-nav__item"><span>🏠</span> Overview</Link>
+        <Link to="/dashboard" className="dash-nav__item"><span>🏠</span> Overview</Link>
         <Link to="/donations/new" className="dash-nav__item dash-nav__item--active"><span>➕</span> New Donation</Link>
-        <a href="#"               className="dash-nav__item"><span>📦</span> My Donations</a>
-        <a href="#"               className="dash-nav__item"><span>📊</span> Impact</a>
-        <a href="#"               className="dash-nav__item"><span>⚙️</span> Settings</a>
+        <Link to="/dashboard/donations" className="dash-nav__item"><span>📦</span> My Donations</Link>
+        <Link to="/dashboard/impact" className="dash-nav__item"><span>📊</span> Impact</Link>
+        <Link to="/dashboard/settings" className="dash-nav__item"><span>⚙️</span> Settings</Link>
       </nav>
       <button className="dash-logout" onClick={handleLogout}>Sign Out</button>
     </aside>

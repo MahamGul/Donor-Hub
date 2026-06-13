@@ -1,14 +1,19 @@
 import React from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 
-import Login       from './pages/Login'
-import Signup      from './pages/Signup'
-import Dashboard   from './pages/Dashboard'
-import Home        from './pages/Home'
+import Login from './pages/Login'
+import Signup from './pages/Signup'
+import Dashboard from './pages/Dashboard'
+import Home from './pages/Home'
 import NewDonation from './pages/Newdonations'
-import NewRequest  from './pages/NewRequest'
+import NewRequest from './pages/NewRequest'
+import DonorDonations from './pages/DonorDonations'
+import DonorImpact from './pages/DonorImpact'
+import DonorSettings from './pages/DonorSettings'
 
 import ProtectedRoute from './components/ProtectedRoute'
+
+const STORAGE_KEY = 'aidbridge-user'
 
 function App() {
   return (
@@ -26,6 +31,33 @@ function App() {
         element={
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/dashboard/donations"
+        element={
+          <ProtectedRoute>
+            <DonorDonations />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/dashboard/impact"
+        element={
+          <ProtectedRoute>
+            <DonorImpact />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/dashboard/settings"
+        element={
+          <ProtectedRoute>
+            <DonorSettings />
           </ProtectedRoute>
         }
       />

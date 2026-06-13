@@ -48,6 +48,11 @@ class UserOut(BaseModel):
     name: str
     email: EmailStr
     role: str | None = None
+    phone: str | None = None
+    city: str | None = None
+    bio: str | None = None
+    notifs: Dict[str, bool] | None = None
+    privacy: Dict[str, bool] | None = None
 
 
 class LoginResponse(BaseModel):
@@ -61,6 +66,16 @@ class SignupIn(BaseModel):
     email: EmailStr
     password: str
     role: str
+
+
+class UserUpdateIn(BaseModel):
+    name: str | None = None
+    email: EmailStr | None = None
+    phone: str | None = None
+    city: str | None = None
+    bio: str | None = None
+    notifs: Dict[str, bool] | None = None
+    privacy: Dict[str, bool] | None = None
 
 
 # =========================
@@ -241,6 +256,22 @@ async def signup(
         "message": "User created successfully",
         "user": new_user
     }
+
+
+@app.get("/users/{user_id}", response_model=UserOut)
+async def get_user(user_id: str):
+    user = await db.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
+
+
+@app.put("/users/{user_id}", response_model=UserOut)
+async def update_user(user_id: str, user_update: UserUpdateIn):
+    updated = await db.update_user(user_id, user_update.dict(exclude_none=True))
+    if not updated:
+        raise HTTPException(status_code=404, detail="User not found")
+    return updated
 
 
 # =========================
