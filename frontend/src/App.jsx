@@ -15,7 +15,9 @@ import Settings from './pages/Settings'
 import ProtectedRoute from './components/ProtectedRoute'
 import RecipientFeedback from './pages/RecipientFeedback'
 import DonorFeedback from './pages/DonorFeedback'
-
+import AdminLayout from './pages/AdminLayout'
+import AdminDashboard from './pages/AdminDashboard'
+import AdminDonations from './pages/AdminDonations'
 // A small wrapper that picks the right page based on stored user role
 function Feedback() {
   const saved = localStorage.getItem('aidbridge-user')
@@ -46,6 +48,18 @@ function App() {
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/feedback" element={<ProtectedRoute><Feedback /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
+      <Route
+  path="/admin"
+  element={
+    <ProtectedRoute>
+      <AdminLayout />
+    </ProtectedRoute>
+  }
+>
+  <Route index element={<AdminDashboard />} />
+  <Route path="dashboard" element={<AdminDashboard />} />
+  <Route path="donations" element={<AdminDonations />} />
+</Route>
     </Routes>
   )
 }

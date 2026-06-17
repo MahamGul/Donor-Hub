@@ -6,7 +6,7 @@ const STORAGE_KEY = 'aidbridge-user'
 const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
 function Login() {
-  const navigate       = useNavigate()
+  const navigate = useNavigate()
   const { role = 'donor' } = useParams()
 
   const [email,    setEmail]    = useState('')
@@ -15,6 +15,7 @@ function Login() {
   const [error,    setError]    = useState('')
 
   const isRecipient = role === 'recipient'
+  const isAdmin     = role === 'admin'
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -36,7 +37,12 @@ function Login() {
       }
 
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data.user))
-      navigate('/dashboard')
+
+     if (data.user.role === 'admin') {
+  navigate('/admin/dashboard')
+} else {
+  navigate('/dashboard')
+}
 
     } catch {
       setError('Cannot reach server. Make sure the backend is running.')
@@ -45,28 +51,31 @@ function Login() {
     }
   }
 
+  const badgeClass = isAdmin
+    ? 'auth-role-badge auth-role-badge--admin'
+    : isRecipient
+    ? 'auth-role-badge auth-role-badge--recipient'
+    : 'auth-role-badge'
+
   return (
     <div className="auth-page">
-      {/* Background layers */}
       <div className="auth-bg" />
       <div className="auth-glow" />
 
-      {/* Back to home */}
-      <Link to="/" className="auth-back">
-        ← AidBridge
-      </Link>
+      <Link to="/" className="auth-back">← AidBridge</Link>
 
       <div className="auth-card">
-        {/* Role badge */}
-        <div className={`auth-role-badge ${isRecipient ? 'auth-role-badge--recipient' : ''}`}>
-          {isRecipient ? '🤲 Recipient Portal' : '💛 Donor Portal'}
+        <div className={badgeClass}>
+          {isAdmin ? '🛡️ Admin Portal' : isRecipient ? '🤲 Recipient Portal' : '💛 Donor Portal'}
         </div>
 
         <h1 className="auth-title">
-          {isRecipient ? 'Request Aid' : 'Start Giving'}
+          {isAdmin ? 'Admin Access' : isRecipient ? 'Request Aid' : 'Start Giving'}
         </h1>
         <p className="auth-subtitle">
-          {isRecipient
+          {isAdmin
+            ? 'Sign in to manage donations, requests, and platform activity.'
+            : isRecipient
             ? 'Sign in to browse available donations and submit requests.'
             : 'Sign in to manage your donations and track impact.'}
         </p>
@@ -104,34 +113,42 @@ function Login() {
             </div>
           )}
 
-          <button
-            type="submit"
-            className="auth-submit"
-            disabled={loading}
-          >
+          <button type="submit" className="auth-submit" disabled={loading}>
             {loading ? (
               <span className="auth-spinner" />
+            ) : isAdmin ? (
+              'Sign In as Admin'
+            ) : isRecipient ? (
+              'Sign In as Recipient'
             ) : (
-              isRecipient ? 'Sign In as Recipient' : 'Sign In as Donor'
+              'Sign In as Donor'
             )}
           </button>
         </form>
 
         {/* Role switcher */}
-        <div className="auth-switch-role">
-          {isRecipient ? (
-            <>Looking to donate? <Link to="/login/donor">Donor portal →</Link></>
-          ) : (
-            <>Need help? <Link to="/login/recipient">Recipient portal →</Link></>
-          )}
-        </div>
+        {!isAdmin && (
+          <div className="auth-switch-role">
+            {isRecipient ? (
+              <>Looking to donate? <Link to="/login/donor">Donor portal →</Link></>
+            ) : (
+              <>Need help? <Link to="/login/recipient">Recipient portal →</Link></>
+            )}
+          </div>
+        )}
 
         <div className="auth-divider" />
 
-        <p className="auth-footer-link">
-          No account yet?{' '}
-          <Link to="/signup">Create one — it's free</Link>
-        </p>
+        {!isAdmin ? (
+          <p className="auth-footer-link">
+            No account yet?{' '}
+            <Link to="/signup">Create one — it's free</Link>
+          </p>
+        ) : (
+          <p className="auth-footer-link" style={{ color: 'var(--color-text-secondary)', fontSize: '13px' }}>
+            Admin accounts are created by the system administrator only.
+          </p>
+        )}
       </div>
     </div>
   )

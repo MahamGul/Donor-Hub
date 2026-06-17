@@ -326,3 +326,14 @@ async def get_donor_id_for_request(request_id: str) -> Optional[str]:
     if not donation:
         return None
     return donation.get("donorId")
+
+async def get_all_users():
+    await connect_to_mongo()
+
+    users = await _db.users.find().to_list(length=1000)
+
+    for user in users:
+        user["id"] = str(user["_id"])
+        user.pop("_id", None)
+
+    return users

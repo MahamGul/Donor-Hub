@@ -695,3 +695,82 @@ async def list_recipient_feedback(recipient_id: str):
 @app.get("/feedback", response_model=List[FeedbackOut])
 async def list_all_feedback():
     return await db.get_all_feedback()
+
+# =========================
+# ADMIN ROUTES
+# =========================
+
+@app.get("/admin/stats")
+async def admin_stats():
+    donations = await db.get_donations()
+    requests = await db.get_requests()
+
+    try:
+        users = await db.get_all_users()
+        total_users = len(users)
+    except:
+        total_users = 0
+
+    return {
+        "totalDonations": len(donations),
+        "availableDonations": len([
+            d for d in donations
+            if d.get("status") == "available"
+        ]),
+        "fulfilledDonations": len([
+            d for d in donations
+            if d.get("status") == "fulfilled"
+        ]),
+        "expiredDonations": len([
+            d for d in donations
+            if d.get("status") == "expired"
+        ]),
+        "totalRequests": len(requests),
+        "pendingRequests": len([
+            r for r in requests
+            if r.get("status") == "pending"
+        ]),
+        "grantedRequests": len([
+            r for r in requests
+            if r.get("status") == "granted"
+        ]),
+        "totalUsers": total_users,
+    }
+
+
+@app.get("/admin/donations")
+async def admin_donations(limit: int = 5):
+    donations = await db.get_donations()
+
+    donations = sorted(
+        donations,
+        key=lambda x: x.get("createdAt", ""),
+        reverse=True
+    )
+
+    return donations[:limit]
+
+
+@app.get("/admin/requests")
+async def admin_requests(limit: int = 5):
+    try:
+        requests = await db.get_requests()
+
+        print("REQUESTS LOADED:")
+        print(requests)
+
+        requests = sorted(
+            requests,
+            key=lambda x: x.get("createdAt", ""),
+            reverse=True
+        )
+
+        return requests[:limit]
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+
+        return {
+            "error": str(e)
+        }
