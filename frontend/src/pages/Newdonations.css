@@ -501,3 +501,75 @@
     padding: 20px;
   }
 }
+/*── CSS additions for recurring section (append to Newdonations.css) ──*/
+
+.nd-recurring {
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-top: 1.5rem;
+  background: var(--surface-alt, #fafafa);
+}
+
+.nd-recurring__toggle {
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.nd-recurring__label {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.nd-recurring__fields {
+  margin-top: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.nd-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.nd-freq-pills {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.nd-freq-pill {
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--border, #e5e7eb);
+  background: white;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-weight: 500;
+  color: var(--text-secondary, #6b7280);
+}
+
+.nd-freq-pill--active {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.nd-hint-inline {
+  font-size: 0.8rem;
+  color: var(--text-secondary, #6b7280);
+  font-weight: 400;
+  margin-left: 0.25rem;
+}
+
+.nd-review__divider {
+  border: none;
+  border-top: 1px dashed var(--border, #e5e7eb);
+  margin: 0.5rem 0;
+}
+
+/*── END CSS ── */

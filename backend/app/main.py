@@ -4,10 +4,13 @@ from pydantic import BaseModel, EmailStr
 from typing import List, Dict, Any
 from datetime import datetime, timezone
 from secrets import token_urlsafe
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from dateutil.relativedelta import relativedelta
 
 from . import db
 
 app = FastAPI(title="Donor Hub Backend")
+scheduler = AsyncIOScheduler()
 
 app.add_middleware(
     CORSMiddleware,
@@ -738,3 +741,155 @@ async def admin_delete_donation(donation_id: str):
     if not deleted:
         raise HTTPException(status_code=404, detail="Donation not found")
     return {"message": "Donation deleted"}
+
+
+# =========================
+# DONATION PLAN MODELS
+# =========================
+
+class DonationPlanIn(BaseModel):
+    donorId: str
+    category: str
+    title: str
+    description: str
+    details: Dict[str, Any]
+    frequency: str          # "daily" | "weekly" | "monthly"
+    startDate: str          # "YYYY-MM-DD"
+    endDate: str | None = None
+
+
+class DonationPlanOut(DonationPlanIn):
+    id: str
+    status: str             # "active" | "paused" | "cancelled"
+    nextRunDate: str
+    createdAt: str
+
+
+# =========================
+# SCHEDULER LOGIC
+# =========================
+
+def _calc_next_run(current: str, frequency: str) -> str:
+    """Given a date string and frequency, return the next run date string."""
+    dt = datetime.strptime(current, "%Y-%m-%d").date()
+    if frequency == "daily":
+        next_dt = dt + timedelta(days=1)
+    elif frequency == "weekly":
+        next_dt = dt + timedelta(weeks=1)
+    elif frequency == "monthly":
+        next_dt = dt + relativedelta(months=1)
+    else:
+        next_dt = dt + timedelta(weeks=1)   # fallback
+    return next_dt.strftime("%Y-%m-%d")
+
+
+async def process_recurring_donations():
+    """
+    Runs daily. For each active plan whose nextRunDate <= today,
+    creates a real donation and advances the nextRunDate.
+    If endDate is set and passed, marks the plan as cancelled.
+    """
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    plans = await db.get_active_plans()
+
+    for plan in plans:
+        # Check if plan has expired
+        end_date = plan.get("endDate")
+        if end_date and end_date < today_str:
+            await db.update_plan(plan["id"], {"status": "cancelled"})
+            continue
+
+        next_run = plan.get("nextRunDate", "")
+        if next_run > today_str:
+            continue    # not due yet
+
+        # Create the actual donation from the plan
+        donation_data = {
+            "donorId":      plan["donorId"],
+            "category":     plan["category"],
+            "title":        plan["title"],
+            "description":  plan["description"],
+            "details":      plan["details"],
+            "planId":       plan["id"],   # link back to plan
+        }
+        await db.create_donation(donation_data)
+
+        # Advance nextRunDate
+        new_next = _calc_next_run(today_str, plan["frequency"])
+        await db.update_plan(plan["id"], {"nextRunDate": new_next})
+
+
+# =========================
+# STARTUP / SHUTDOWN
+# (replace your existing startup/shutdown events)
+# =========================
+
+@app.on_event("startup")
+async def startup_event():
+    await db.connect_to_mongo()
+    scheduler.add_job(
+        process_recurring_donations,
+        "cron",
+        hour=0,
+        minute=5,
+        id="recurring_donations",
+        replace_existing=True,
+    )
+    scheduler.start()
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    await db.close_mongo_connection()
+    scheduler.shutdown(wait=False)
+
+
+# =========================
+# DONATION PLAN ROUTES
+# =========================
+
+@app.post("/donation-plans", response_model=DonationPlanOut)
+async def create_donation_plan(plan: DonationPlanIn):
+    plan_dict = plan.dict()
+
+    # nextRunDate = startDate (first run happens on the start date)
+    plan_dict["nextRunDate"] = plan_dict["startDate"]
+
+    new_plan = await db.create_donation_plan(plan_dict)
+    if not new_plan:
+        raise HTTPException(status_code=500, detail="Failed to create donation plan")
+    return new_plan
+
+
+@app.get("/donation-plans/donor/{donor_id}", response_model=List[DonationPlanOut])
+async def get_donor_plans(donor_id: str):
+    return await db.get_plans_by_donor(donor_id)
+
+
+@app.patch("/donation-plans/{plan_id}/status")
+async def update_plan_status(plan_id: str, payload: Dict[str, str]):
+    status = payload.get("status")
+    if status not in {"active", "paused", "cancelled"}:
+        raise HTTPException(status_code=400, detail="Status must be active, paused, or cancelled")
+
+    updated = await db.update_plan(plan_id, {"status": status})
+    if not updated:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    return updated
+
+
+@app.delete("/donation-plans/{plan_id}")
+async def delete_donation_plan(plan_id: str):
+    deleted = await db.delete_plan(plan_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    return {"message": "Plan cancelled and deleted"}
+
+
+@app.post("/donation-plans/process")
+async def trigger_process():
+    """Manual trigger for testing — remove or protect in production."""
+    await process_recurring_donations()
+    return {"message": "Recurring donations processed"}
+
+

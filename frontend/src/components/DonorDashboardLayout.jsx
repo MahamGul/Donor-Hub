@@ -7,21 +7,26 @@ const STORAGE_KEY = 'aidbridge-user'
 
 const NAV_ITEMS = [
   { id: 'overview',  icon: '🏠', label: 'Overview',     link: '/dashboard' },
-  { id: 'donations', icon: '📦', label: 'My Donations', link: '/dashboard/donations' },
   { id: 'new',       icon: '➕', label: 'New Donation', link: '/donations/new' },
+  { id: 'donations', icon: '📦', label: 'My Donations', link: '/dashboard/donations' },
+  { id: 'plans',     icon: '🔁', label: 'My Plans',     link: '/dashboard/plans' },
   { id: 'impact',    icon: '📊', label: 'Impact',       link: '/dashboard/impact' },
   { id: 'feedback',  icon: '💬', label: 'Feedback',     link: '/feedback' },
   { id: 'settings',  icon: '⚙️', label: 'Settings',     link: '/dashboard/settings' },
 ]
 
+// Keys here must match the category `id`s used in Newdonations.jsx's
+// CATEGORIES array (Food, Education, Medicine, Funds, Blood, Clothes).
+// Previously this had "Clothing"/"Financial"/"Health", which never matched
+// a real donation.category value, so Clothes and Blood donations always
+// fell back to the generic 📦 icon below.
 const CATEGORY_ICONS = {
   Food: '🍲',
   Education: '📚',
-  Health: '🏥',
-  Funds: '💰',
   Medicine: '💊',
-  Clothing: '👕',
-  Financial: '💰',
+  Funds: '💰',
+  Blood: '🩸',
+  Clothes: '👕',
 }
 
 function normalizeDonation(donation) {
@@ -32,7 +37,10 @@ function normalizeDonation(donation) {
   const location = rawDetails.city || rawDetails.location || rawDetails.country || '—'
   const amount = rawDetails.amount ? `${rawDetails.amount} ${rawDetails.currency || ''}`.trim() : null
   const quantity = rawDetails.quantity ? `${rawDetails.quantity}` : null
-  const impact = amount || quantity || rawDetails.peopleHelped || '—'
+  // Blood and Education donations don't have a generic "quantity" field
+  // (they use bloodGroup / bookCount instead), so without these fallbacks
+  // their impact column always showed "—".
+  const impact = amount || quantity || rawDetails.peopleHelped || rawDetails.bloodGroup || rawDetails.bookCount || '—'
   const note = donation.description || rawDetails.notes || rawDetails.note || 'No notes provided.'
   let status = donation.status ? donation.status.charAt(0).toUpperCase() + donation.status.slice(1) : 'Pending'
   if (status === 'Available') status = 'Pending'

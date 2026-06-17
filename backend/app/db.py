@@ -406,3 +406,70 @@ async def get_all_users():
         sanitized.append(user)
 
     return sanitized
+
+# =========================
+# DONATION PLANS
+# =========================
+
+async def create_donation_plan(plan: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    await connect_to_mongo()
+    plan.setdefault("status", "active")
+    plan.setdefault("createdAt", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
+    res = await _db.donation_plans.insert_one(plan)
+    new = await _db.donation_plans.find_one({"_id": res.inserted_id})
+    if new:
+        return _serialize(new)
+    return None
+
+
+async def get_plans_by_donor(donor_id: str) -> List[Dict[str, Any]]:
+    await connect_to_mongo()
+    cursor = _db.donation_plans.find({"donorId": donor_id})
+    docs = []
+    async for doc in cursor:
+        docs.append(_serialize(doc))
+    return docs
+
+
+async def get_active_plans() -> List[Dict[str, Any]]:
+    await connect_to_mongo()
+    cursor = _db.donation_plans.find({"status": "active"})
+    docs = []
+    async for doc in cursor:
+        docs.append(_serialize(doc))
+    return docs
+
+
+async def update_plan(plan_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    await connect_to_mongo()
+    try:
+        oid = ObjectId(plan_id)
+    except Exception:
+        return None
+    await _db.donation_plans.update_one({"_id": oid}, {"$set": update_data})
+    updated = await _db.donation_plans.find_one({"_id": oid})
+    if not updated:
+        return None
+    return _serialize(updated)
+
+
+async def delete_plan(plan_id: str) -> bool:
+    await connect_to_mongo()
+    try:
+        oid = ObjectId(plan_id)
+    except Exception:
+        return False
+    result = await _db.donation_plans.delete_one({"_id": oid})
+    return result.deleted_count > 0
+
+
+async def get_plan_by_id(plan_id: str) -> Optional[Dict[str, Any]]:
+    await connect_to_mongo()
+    try:
+        oid = ObjectId(plan_id)
+    except Exception:
+        return None
+    doc = await _db.donation_plans.find_one({"_id": oid})
+    if not doc:
+        return None
+    return _serialize(doc)

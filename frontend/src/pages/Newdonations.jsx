@@ -430,6 +430,68 @@ function ReviewRow({ label, value }) {
   )
 }
 
+/* ── Recurring toggle block ── */
+function RecurringSection({ recurring, onChange }) {
+  const today = new Date().toISOString().split('T')[0]
+  return (
+    <div className="nd-recurring">
+      <label className="nd-checkbox-label nd-recurring__toggle">
+        <input
+          type="checkbox"
+          className="nd-checkbox"
+          checked={recurring.enabled}
+          onChange={e => onChange({ ...recurring, enabled: e.target.checked })}
+        />
+        <span className="nd-recurring__label">🔁 Make this a recurring donation</span>
+        <span className="nd-checkbox-hint">Automatically repeats on your chosen schedule</span>
+      </label>
+
+      {recurring.enabled && (
+        <div className="nd-recurring__fields">
+          <div className="nd-field">
+            <label className="nd-label">Frequency <span className="nd-req">*</span></label>
+            <div className="nd-freq-pills">
+              {['daily', 'weekly', 'monthly'].map(f => (
+                <button
+                  key={f}
+                  type="button"
+                  className={`nd-freq-pill ${recurring.frequency === f ? 'nd-freq-pill--active' : ''}`}
+                  onClick={() => onChange({ ...recurring, frequency: f })}
+                >
+                  {f === 'daily' ? '📅 Daily' : f === 'weekly' ? '🗓 Weekly' : '📆 Monthly'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="nd-field-row">
+            <div className="nd-field">
+              <label className="nd-label">Start date <span className="nd-req">*</span></label>
+              <input
+                className="nd-input"
+                type="date"
+                min={today}
+                value={recurring.startDate}
+                onChange={e => onChange({ ...recurring, startDate: e.target.value })}
+              />
+            </div>
+            <div className="nd-field">
+              <label className="nd-label">End date <span className="nd-hint-inline">(optional)</span></label>
+              <input
+                className="nd-input"
+                type="date"
+                min={recurring.startDate || today}
+                value={recurring.endDate}
+                onChange={e => onChange({ ...recurring, endDate: e.target.value })}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ═══════════════════════════════════════════════════════════ */
 export default function NewDonation() {
   const navigate = useNavigate()
@@ -443,6 +505,14 @@ export default function NewDonation() {
   const [error,   setError]   = useState('')
   const [success, setSuccess] = useState(false)
 
+  const today = new Date().toISOString().split('T')[0]
+  const [recurring, setRecurring] = useState({
+    enabled:   false,
+    frequency: 'monthly',
+    startDate: today,
+    endDate:   '',
+  })
+
   if (!user || user.role !== 'donor') {
     navigate('/login/donor')
     return null
@@ -450,7 +520,6 @@ export default function NewDonation() {
 
   const handleCatSelect = (c) => {
     setCat(c)
-    // Pre-seed currency for funds
     const defaults = c.id === 'Funds' ? { currency: 'PKR' } : {}
     setForm({ title: '', description: '', details: defaults })
     setStep(2)
@@ -460,29 +529,59 @@ export default function NewDonation() {
     setForm(prev => ({ ...prev, details: { ...prev.details, [field]: value } }))
   }
 
-  const canProceed = () =>
-    form.title.trim() && cat?.isValid(form)
+  const canProceed = () => {
+    if (!form.title.trim() || !cat?.isValid(form)) return false
+    if (recurring.enabled && (!recurring.frequency || !recurring.startDate)) return false
+    return true
+  }
 
   const handleSubmit = async () => {
     setError('')
     setLoading(true)
     try {
-      const payload = {
-        donorId:     user.id,
-        category:    cat.id,
-        title:       form.title,
-        description: form.description,
-        details:     cat.buildDetails(form.details),
+      const builtDetails = cat.buildDetails(form.details)
+
+      if (recurring.enabled) {
+        // Create a donation PLAN instead of a one-off donation
+        const payload = {
+          donorId:     user.id,
+          category:    cat.id,
+          title:       form.title,
+          description: form.description,
+          details:     builtDetails,
+          frequency:   recurring.frequency,
+          startDate:   recurring.startDate,
+          endDate:     recurring.endDate || null,
+        }
+        const res = await fetch(`${API_URL}/donation-plans`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(payload),
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.detail || 'Failed to create donation plan')
+        }
+      } else {
+        // Regular one-time donation
+        const payload = {
+          donorId:     user.id,
+          category:    cat.id,
+          title:       form.title,
+          description: form.description,
+          details:     builtDetails,
+        }
+        const res = await fetch(`${API_URL}/donations`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(payload),
+        })
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.detail || 'Failed to submit donation')
+        }
       }
-      const res = await fetch(`${API_URL}/donations`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify(payload),
-      })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.detail || 'Failed to submit donation')
-      }
+
       setSuccess(true)
     } catch (e) {
       setError(e.message)
@@ -498,14 +597,24 @@ export default function NewDonation() {
         <Sidebar user={user} navigate={navigate} />
         <main className="nd-main">
           <div className="nd-success">
-            <div className="nd-success__icon">🎉</div>
-            <h2>Donation submitted!</h2>
-            <p>Thank you, {user.name.split(' ')[0]}. Your donation has been logged and will be matched with a recipient soon.</p>
+            <div className="nd-success__icon">{recurring.enabled ? '🔁' : '🎉'}</div>
+            <h2>{recurring.enabled ? 'Recurring plan created!' : 'Donation submitted!'}</h2>
+            <p>
+              {recurring.enabled
+                ? `Your ${recurring.frequency} ${cat.label.toLowerCase()} donation is scheduled. The first one runs on ${recurring.startDate}.`
+                : `Thank you, ${user.name.split(' ')[0]}. Your donation has been logged and will be matched with a recipient soon.`
+              }
+            </p>
             <div className="nd-success__actions">
               <button className="nd-btn nd-btn--primary" onClick={() => navigate('/dashboard')}>
                 Back to Dashboard
               </button>
-              <button className="nd-btn nd-btn--ghost" onClick={() => { setSuccess(false); setStep(1); setCat(null) }}>
+              {recurring.enabled && (
+                <button className="nd-btn nd-btn--ghost" onClick={() => navigate('/dashboard/plans')}>
+                  View My Plans
+                </button>
+              )}
+              <button className="nd-btn nd-btn--ghost" onClick={() => { setSuccess(false); setStep(1); setCat(null); setRecurring({ enabled: false, frequency: 'monthly', startDate: today, endDate: '' }) }}>
                 Donate again
               </button>
             </div>
@@ -582,6 +691,9 @@ export default function NewDonation() {
               {/* Category-specific fields */}
               {cat.renderFields(form, handleDetailChange)}
 
+              {/* ── Recurring section ── */}
+              <RecurringSection recurring={recurring} onChange={setRecurring} />
+
               <button
                 className="nd-btn nd-btn--primary nd-btn--full"
                 disabled={!canProceed()}
@@ -604,13 +716,21 @@ export default function NewDonation() {
               <ReviewRow label="Title"       value={form.title} />
               <ReviewRow label="Description" value={form.description} />
 
-              {/* Render each detail field */}
               {Object.entries(form.details)
                 .filter(([, v]) => v !== '' && v !== undefined && !(Array.isArray(v) && v.length === 0))
                 .map(([k, v]) => (
                   <ReviewRow key={k} label={k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())} value={v} />
                 ))
               }
+
+              {recurring.enabled && (
+                <>
+                  <div className="nd-review__divider" />
+                  <ReviewRow label="🔁 Schedule"  value={`${recurring.frequency.charAt(0).toUpperCase() + recurring.frequency.slice(1)}`} />
+                  <ReviewRow label="Starts"       value={recurring.startDate} />
+                  {recurring.endDate && <ReviewRow label="Ends" value={recurring.endDate} />}
+                </>
+              )}
 
               <ReviewRow label="Donor" value={user.name} />
             </div>
@@ -622,7 +742,12 @@ export default function NewDonation() {
               onClick={handleSubmit}
               disabled={loading}
             >
-              {loading ? 'Submitting…' : 'Confirm Donation ✓'}
+              {loading
+                ? 'Submitting…'
+                : recurring.enabled
+                  ? `Confirm ${recurring.frequency.charAt(0).toUpperCase() + recurring.frequency.slice(1)} Plan ✓`
+                  : 'Confirm Donation ✓'
+              }
             </button>
           </section>
         )}
@@ -646,6 +771,7 @@ function Sidebar({ user, navigate }) {
         <Link to="/dashboard" className="dash-nav__item"><span>🏠</span> Overview</Link>
         <Link to="/donations/new" className="dash-nav__item dash-nav__item--active"><span>➕</span> New Donation</Link>
         <Link to="/dashboard/donations" className="dash-nav__item"><span>📦</span> My Donations</Link>
+        <Link to="/dashboard/plans" className="dash-nav__item"><span>🔁</span> My Plans</Link>
         <Link to="/dashboard/impact" className="dash-nav__item"><span>📊</span> Impact</Link>
         <Link to="/feedback" className="dash-nav__item"><span>💬</span> Feedback</Link>
         <Link to="/dashboard/settings" className="dash-nav__item"><span>⚙️</span> Settings</Link>

@@ -9,6 +9,7 @@ import NewDonation from './pages/Newdonations'
 import NewRequest from './pages/NewRequest'
 import DonorDonations from './pages/DonorDonations'
 import DonorImpact from './pages/DonorImpact'
+import RecurringPlans from './pages/RecurringPlans'
 import MyRequests from './pages/MyRequests'
 import Track from './pages/Track'
 import Settings from './pages/Settings'
@@ -42,6 +43,7 @@ function App() {
 
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/dashboard/donations" element={<ProtectedRoute><DonorDonations /></ProtectedRoute>} />
+      <Route path="/dashboard/plans" element={<ProtectedRoute><RecurringPlans /></ProtectedRoute>} />
       <Route path="/dashboard/impact" element={<ProtectedRoute><DonorImpact /></ProtectedRoute>} />
 
       <Route path="/donations/new" element={<ProtectedRoute><NewDonation /></ProtectedRoute>} />
