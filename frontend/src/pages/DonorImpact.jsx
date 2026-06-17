@@ -8,7 +8,21 @@ function Impact({ donations }) {
   const pending   = donations.filter(d => d.status === 'Pending')
 
   // cities already extracted by normalizeDonation via details.city etc.
-  const cities = [...new Set(donations.map(d => d.location).filter(l => l && l !== '—'))]
+  const formatCity = city =>
+  city
+    .toLowerCase()
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+
+const cities = [
+  ...new Set(
+    donations
+      .map(d => d.location?.trim())
+      .filter(l => l && l !== '—')
+      .map(formatCity)
+  )
+]
 
   // category breakdown
   const catCounts = donations.reduce((acc, d) => {
