@@ -15,20 +15,77 @@ const CATEGORY_ICONS = {
 }
 
 const STATUS_MAP = {
-  granted: 'Fulfilled',
+  granted:   'Fulfilled',
   fulfilled: 'Fulfilled',
-  pending: 'Pending',
-  rejected: 'Rejected',
+  pending:   'Pending',
+  rejected:  'Rejected',
 }
 
-/* Pull out a "where" string per category, falling back to '—' */
+/*
+  locationOf — extracts a human-readable location/provider string from a request.
+
+  After a request is granted, db.update_request merges the allocation payload
+  into the request document. The allocation payload looks like:
+    { matchedDonationId, message, details: { city, ... } }
+
+  update_data.update(allocation) means req.details is REPLACED by the granted
+  details dict (which has city). The original recipient-submitted details
+  (including any city the recipient entered) are lost.
+
+  So for a granted request:
+    req.details = the granted details dict  → has city
+  For a pending/rejected request:
+    req.details = the recipient's original submission → may have city
+
+  We deep-search all known city/location fields across both shapes.
+*/
 function locationOf(req) {
+    console.log('REQUEST:', JSON.stringify(req, null, 2))  // ← add this
   const d = req.details || {}
+
   switch (req.category) {
-    case 'Blood':
-      return [d.city, d.hospitalPreference].filter(Boolean).join(' • ') || '—'
-    case 'Funds':
-      return d.bankDetails?.bankProvider || '—'
+    case 'Blood': {
+      // Granted shape:  { recipientBloodGroup, donorBloodGroup, city, hospitalPreference }
+      // Pending shape:  { bloodGroup, city, hospitalPreference }
+      const city = d.city || ''
+      const hosp = d.hospitalPreference || ''
+      return [city, hosp].filter(Boolean).join(' • ') || '—'
+    }
+
+    case 'Funds': {
+      // Granted shape:  { amountGranted, bankDetails, sources, city }
+      // Pending shape:  { bankDetails: { bankProvider, accountNumber }, transferMethod }
+      if (d.city) return d.city
+
+      const bank = d.bankDetails || {}
+      return (
+        bank.bankProvider ||
+        bank.transferMethod ||
+        d.transferMethod ||
+        '—'
+      )
+    }
+
+    case 'Food':
+      // Granted shape:  { items, expiryDate, frozen, packagesGranted, city }
+      // Pending shape:  { items, expiryDate, frozen, city }
+      return d.city || '—'
+
+    case 'Medicine':
+      // Granted shape:  { medicineName, expiryDate, city }
+      // Pending shape:  { medicineName, city }
+      return d.city || '—'
+
+    case 'Clothes':
+      // Granted shape:  { items, type, size, city }
+      // Pending shape:  { type, size, city }
+      return d.city || '—'
+
+    case 'Education':
+      // Granted shape:  { subjects, grade, requestedSubject, requestedGrade, city }
+      // Pending shape:  { subject, grade, city }
+      return d.city || '—'
+
     default:
       return d.city || '—'
   }
@@ -36,27 +93,21 @@ function locationOf(req) {
 
 export default function Track() {
   const navigate = useNavigate()
-  const [user, setUser] = useState(null)
-  const [requests, setRequests] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-
-  const [statusFilter, setStatusFilter] = useState('All')
+  const [user,           setUser]           = useState(null)
+  const [requests,       setRequests]       = useState([])
+  const [loading,        setLoading]        = useState(true)
+  const [error,          setError]          = useState('')
+  const [statusFilter,   setStatusFilter]   = useState('All')
   const [categoryFilter, setCategoryFilter] = useState('All')
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
+  const [dateFrom,       setDateFrom]       = useState('')
+  const [dateTo,         setDateTo]         = useState('')
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
-    if (!saved) {
-      navigate('/login/recipient')
-      return
-    }
+    if (!saved) { navigate('/login/recipient'); return }
+
     const parsed = JSON.parse(saved)
-    if (parsed.role !== 'recipient') {
-      navigate('/dashboard')
-      return
-    }
+    if (parsed.role !== 'recipient') { navigate('/dashboard'); return }
     setUser(parsed)
 
     fetch(`${API_URL}/requests/recipient/${parsed.id}`)
@@ -74,15 +125,15 @@ export default function Track() {
 
   if (!user) return null
 
-  const statuses = ['All', 'Fulfilled', 'Pending', 'Rejected']
+  const statuses   = ['All', 'Fulfilled', 'Pending', 'Rejected']
   const categories = ['All', ...Array.from(new Set(requests.map(r => r.category)))]
 
   const filtered = requests.filter(r => {
     const status = STATUS_MAP[r.status] || 'Pending'
-    if (statusFilter !== 'All' && status !== statusFilter) return false
+    if (statusFilter   !== 'All' && status     !== statusFilter)   return false
     if (categoryFilter !== 'All' && r.category !== categoryFilter) return false
     if (dateFrom && r.createdAt < dateFrom) return false
-    if (dateTo && r.createdAt > dateTo) return false
+    if (dateTo   && r.createdAt > dateTo)   return false
     return true
   })
 
@@ -101,10 +152,13 @@ export default function Track() {
         <header className="donations-page-header">
           <div>
             <h1 className="donations-page-title">Track Requests</h1>
-            <p className="donations-page-sub">Filter by status, category, or date to see when and where aid was delivered.</p>
+            <p className="donations-page-sub">
+              Filter by status, category, or date to see when and where aid was delivered.
+            </p>
           </div>
         </header>
 
+        {/* ── Filters ── */}
         <div className="donations-toolbar">
           <div className="filter-row">
             <div className="filter-group">
@@ -161,6 +215,7 @@ export default function Track() {
           </div>
         </div>
 
+        {/* ── States ── */}
         {loading && (
           <div className="dash-loading" style={{ minHeight: '200px' }}>
             <div className="dash-loading__spinner" />
@@ -174,9 +229,13 @@ export default function Track() {
           </div>
         )}
 
+        {/* ── Table ── */}
         {!loading && !error && (
           <div className="dash-table">
-            <div className="dash-table__head" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr' }}>
+            <div
+              className="dash-table__head"
+              style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr' }}
+            >
               <span>Item</span>
               <span>Date</span>
               <span>Location / Provider</span>
@@ -185,24 +244,39 @@ export default function Track() {
             </div>
 
             {filtered.length === 0 && (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: 'rgba(240,237,230,0.4)', fontSize: '13px' }}>
+              <div style={{
+                padding: '40px 20px',
+                textAlign: 'center',
+                color: 'rgba(240,237,230,0.4)',
+                fontSize: '13px',
+              }}>
                 No requests match these filters.
               </div>
             )}
 
             {filtered.map(req => {
-              const status = STATUS_MAP[req.status] || 'Pending'
+              const status  = STATUS_MAP[req.status] || 'Pending'
               const pillMap = { Fulfilled: 'pill--green', Pending: 'pill--amber', Rejected: 'pill--red' }
+              const loc     = locationOf(req)
+
               return (
-                <div key={req.id} className="dash-table__row" style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr' }}>
+                <div
+                  key={req.id}
+                  className="dash-table__row"
+                  style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 1fr' }}
+                >
                   <span className="dash-table__item">
                     <span className="dash-table__icon">{CATEGORY_ICONS[req.category] || '📦'}</span>
                     {req.category}
                   </span>
                   <span className="dash-table__date">{req.createdAt}</span>
-                  <span className="dash-table__date">{locationOf(req)}</span>
-                  <span><span className={`pill ${pillMap[status] || 'pill--amber'}`}>{status}</span></span>
-                  <span className="dash-table__date" style={{ fontSize: '11px' }}>{req.message || '—'}</span>
+                  <span className="dash-table__date">{loc}</span>
+                  <span>
+                    <span className={`pill ${pillMap[status] || 'pill--amber'}`}>{status}</span>
+                  </span>
+                  <span className="dash-table__date" style={{ fontSize: '11px' }}>
+                    {req.message || '—'}
+                  </span>
                 </div>
               )
             })}
@@ -213,6 +287,7 @@ export default function Track() {
   )
 }
 
+/* ── Sidebar ── */
 function Sidebar({ user, navigate }) {
   const handleLogout = () => {
     localStorage.removeItem(STORAGE_KEY)
@@ -223,15 +298,14 @@ function Sidebar({ user, navigate }) {
       <Link to="/" className="dash-logo">Aid<span>Bridge</span></Link>
       <nav className="dash-nav">
         <span className="dash-nav__label">Menu</span>
-        <Link to="/dashboard" className="dash-nav__item"><span>🏠</span> Overview</Link>
-<Link to="/requests/my" className="dash-nav__item"><span>📋</span> My Requests</Link>
-<Link to="/requests/new" className="dash-nav__item"><span>➕</span> New Request</Link>
-<Link to="/requests/track" className="dash-nav__item dash-nav__item--active"><span>🚚</span> Track Requests</Link>
-<Link to="/feedback" className="dash-nav__item"><span>💬</span> Feedback</Link>
-<Link to="/settings" className="dash-nav__item"><span>⚙️</span> Settings</Link>
+        <Link to="/dashboard"      className="dash-nav__item"><span>🏠</span> Overview</Link>
+        <Link to="/requests/my"    className="dash-nav__item"><span>📋</span> My Requests</Link>
+        <Link to="/requests/new"   className="dash-nav__item"><span>➕</span> New Request</Link>
+        <Link to="/requests/track" className="dash-nav__item dash-nav__item--active"><span>🚚</span> Track Requests</Link>
+        <Link to="/feedback"       className="dash-nav__item"><span>💬</span> Feedback</Link>
+        <Link to="/settings"       className="dash-nav__item"><span>⚙️</span> Settings</Link>
       </nav>
       <button className="dash-logout" onClick={handleLogout}>Sign Out</button>
     </aside>
   )
 }
-

@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import './AdminLayout.css'
 
-const API_BASE   = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+const API_BASE    = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 const STORAGE_KEY = 'aidbridge-user'
 
-const ALL_STATUSES  = ['available', 'fulfilled', 'expired', 'invalid']
-const CATEGORIES    = ['All', 'Food', 'Education', 'Clothes', 'Medicine', 'Funds', 'Blood']
+const ALL_STATUSES   = ['available', 'fulfilled', 'expired', 'invalid']
+const CATEGORIES     = ['All', 'Food', 'Education', 'Clothes', 'Medicine', 'Funds', 'Blood']
 const CATEGORY_ICONS = {
   Food: '🍱', Education: '📚', Clothes: '👕',
   Medicine: '💊', Funds: '💰', Blood: '🩸',
@@ -26,27 +26,43 @@ function extractDonationId(donation) {
   return donation.id || donation._id?.$oid || donation._id || ''
 }
 
+function getToken() {
+  try {
+    const user = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    // user.id is the string id set by the backend; fall back to _id variants
+    return user?.id || user?._id?.$oid || user?._id || ''
+  } catch {
+    return ''
+  }
+}
+
 function AdminDonations() {
-  const [donations, setDonations] = useState([])
-  const [loading,   setLoading]   = useState(true)
-  const [error,     setError]     = useState('')
-  const [search,    setSearch]    = useState('')
-  const [catFilter, setCatFilter] = useState('All')
-  const [statFilter,setStatFilter]= useState('All')
+  const [donations,  setDonations]  = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [error,      setError]      = useState('')
+  const [search,     setSearch]     = useState('')
+  const [catFilter,  setCatFilter]  = useState('All')
+  const [statFilter, setStatFilter] = useState('All')
 
-  const token = (() => {
-    try { return JSON.parse(localStorage.getItem(STORAGE_KEY))?._id } catch { return null }
-  })()
+  // Build headers fresh on every request so they always carry the latest token
+  const makeHeaders = () => ({
+    'Content-Type': 'application/json',
+    'x-user-id': getToken(),
+  })
 
-  const headers = { 'Content-Type': 'application/json', 'x-user-id': token }
-
-  const load = useCallback(() => {
+  const load = useCallback(async () => {
     setLoading(true)
-    fetch(`${API_BASE}/admin/donations`, { headers })
-      .then(r => r.json())
-      .then(data => setDonations(data.donations || data))
-      .catch(() => setError('Failed to load donations.'))
-      .finally(() => setLoading(false))
+    setError('')
+    try {
+      const res = await fetch(`${API_BASE}/admin/donations`, { headers: makeHeaders() })
+      if (!res.ok) throw new Error(`Server returned ${res.status}`)
+      const data = await res.json()
+      setDonations(Array.isArray(data) ? data : data.donations || [])
+    } catch (e) {
+      setError(`Failed to load donations: ${e.message}`)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -55,15 +71,18 @@ function AdminDonations() {
     try {
       const res = await fetch(`${API_BASE}/admin/donations/${id}/status`, {
         method:  'PATCH',
-        headers,
+        headers: makeHeaders(),
         body:    JSON.stringify({ status }),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.detail || `Server returned ${res.status}`)
+      }
       setDonations(prev =>
         prev.map(d => extractDonationId(d) === id ? { ...d, status } : d)
       )
-    } catch {
-      alert('Failed to update status. Please try again.')
+    } catch (e) {
+      alert(`Failed to update status: ${e.message}`)
     }
   }
 
@@ -71,12 +90,16 @@ function AdminDonations() {
     if (!window.confirm('Delete this donation? This cannot be undone.')) return
     try {
       const res = await fetch(`${API_BASE}/admin/donations/${id}`, {
-        method: 'DELETE', headers,
+        method:  'DELETE',
+        headers: makeHeaders(),
       })
-      if (!res.ok) throw new Error()
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        throw new Error(data?.detail || `Server returned ${res.status}`)
+      }
       setDonations(prev => prev.filter(d => extractDonationId(d) !== id))
-    } catch {
-      alert('Failed to delete donation.')
+    } catch (e) {
+      alert(`Failed to delete donation: ${e.message}`)
     }
   }
 
@@ -114,7 +137,6 @@ function AdminDonations() {
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
-
             <select
               className="ap-select"
               value={catFilter}
@@ -122,7 +144,6 @@ function AdminDonations() {
             >
               {CATEGORIES.map(c => <option key={c}>{c}</option>)}
             </select>
-
             <select
               className="ap-select"
               value={statFilter}
@@ -172,7 +193,7 @@ function AdminDonations() {
                       <td>
                         <select
                           className="ap-select"
-                          value={d.status}
+                          value={d.status || 'available'}
                           onChange={e => updateStatus(id, e.target.value)}
                         >
                           {ALL_STATUSES.map(s => (

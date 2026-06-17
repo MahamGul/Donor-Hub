@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import List, Dict, Any
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from secrets import token_urlsafe
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dateutil.relativedelta import relativedelta
@@ -107,11 +107,21 @@ class DonationOut(DonationIn):
 @app.on_event("startup")
 async def startup_event():
     await db.connect_to_mongo()
+    scheduler.add_job(
+        process_recurring_donations,
+        "cron",
+        hour=0,
+        minute=5,
+        id="recurring_donations",
+        replace_existing=True,
+    )
+    scheduler.start()
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     await db.close_mongo_connection()
+    scheduler.shutdown(wait=False)
 
 
 # =========================
@@ -310,7 +320,7 @@ async def create_request(req: RequestIn):
         "category": req.category,
         "details": req.details,
         "status": "pending",
-        "message": None,  # no message until admin acts
+        "message": None,
     }
 
     new_request = await db.create_request(request_data)
@@ -503,29 +513,46 @@ async def admin_update_donation_status(donation_id: str, payload: Dict[str, str]
     return updated
 
 
+# =========================
+# HELPERS — matching against the new "list of items" donation shape
+# =========================
+
+def _single_item(details: Dict[str, Any], list_key: str) -> str | None:
+    """
+    The new donation form stores a list of named items (e.g. details['bloodGroups']
+    or details['medicines']) instead of one fixed field. For matching purposes we
+    only treat a donation as usable if that list has exactly one entry — donations
+    with multiple items aren't matched against a single recipient request.
+    Returns the single item (stripped) or None if the list is empty/has >1 entries.
+    """
+    items = details.get(list_key) or []
+    items = [i for i in items if isinstance(i, str) and i.strip()]
+    if len(items) != 1:
+        return None
+    return items[0].strip()
+
+
 async def _allocate_request_to_donation(request_doc: Dict[str, Any]) -> Dict[str, Any]:
     category = request_doc.get("category")
     details = request_doc.get("details", {})
 
     if category == "Food":
         available = await db.get_donations_by_category("Food")
-        match = next(
-            (d for d in available if d["details"].get("quantity", 0) > 0),
-            None
-        )
+        match = next(iter(available), None)
         if not match:
             raise HTTPException(status_code=404, detail="No food packages currently available")
 
-        await db.decrement_food_package(match["id"])
+        await db.mark_donation_fulfilled(match["id"])
 
         return {
             "matchedDonationId": match["id"],
             "message": "1 food package granted",
             "details": {
-                "items": match["details"].get("items", []),
-                "expiryDate": match["details"].get("expiryDate"),
-                "frozen": match["details"].get("frozen", False),
+                "items":           match["details"].get("items", []),
+                "expiryDate":      match["details"].get("expiryDate"),
+                "frozen":          match["details"].get("frozen", False),
                 "packagesGranted": 1,
+                "city":            match["details"].get("city"),
             },
         }
 
@@ -559,13 +586,20 @@ async def _allocate_request_to_donation(request_doc: Dict[str, Any]) -> Dict[str
             sources.append({"donationId": d["id"], "amount": take})
             remaining_to_allocate -= take
 
+        # pick city from the first source donation that has one
+        funds_city = next(
+            (d["details"].get("city") for d in available if d["details"].get("city")),
+            None,
+        )
+
         return {
             "matchedDonationId": sources[0]["donationId"] if sources else None,
             "message": f"PKR {allocated} allocated to recipient account",
             "details": {
                 "amountGranted": allocated,
-                "bankDetails": bank_details,
-                "sources": sources,
+                "bankDetails":   bank_details,
+                "sources":       sources,
+                "city":          funds_city,
             },
         }
 
@@ -578,9 +612,9 @@ async def _allocate_request_to_donation(request_doc: Dict[str, Any]) -> Dict[str
         available = await db.get_donations_by_category("Education")
 
         def matches(d):
-            d_grade = d["details"].get("grade")
+            d_grade    = d["details"].get("grade")
             d_subjects = [s.lower() for s in d["details"].get("subjects", [])]
-            grade_match = (d_grade == grade) or (d_grade == "All levels")
+            grade_match   = (d_grade == grade) or (d_grade == "All levels")
             subject_match = (not d_subjects) or (subject.lower() in d_subjects)
             return grade_match and subject_match
 
@@ -592,13 +626,13 @@ async def _allocate_request_to_donation(request_doc: Dict[str, Any]) -> Dict[str
 
         return {
             "matchedDonationId": match["id"],
-            "message": f"{match['details'].get('bookCount')} book(s) granted",
+            "message": "1 book package granted",
             "details": {
-                "bookCount": match["details"].get("bookCount"),
-                "grade": match["details"].get("grade"),
-                "subjects": match["details"].get("subjects", []),
+                "subjects":         match["details"].get("subjects", []),
+                "grade":            match["details"].get("grade"),
                 "requestedSubject": subject,
-                "requestedGrade": grade,
+                "requestedGrade":   grade,
+                "city":             match["details"].get("city"),
             },
         }
 
@@ -612,10 +646,17 @@ async def _allocate_request_to_donation(request_doc: Dict[str, Any]) -> Dict[str
             raise HTTPException(status_code=400, detail="Invalid blood group")
 
         available = await db.get_donations_by_category("Blood")
-        match = next(
-            (d for d in available if d["details"].get("bloodGroup") in compatible_donors),
-            None
-        )
+
+        def matched_group(d):
+            return _single_item(d["details"], "bloodGroups")
+
+        match = None
+        for d in available:
+            group = matched_group(d)
+            if group and group in compatible_donors:
+                match = d
+                break
+
         if not match:
             raise HTTPException(
                 status_code=404,
@@ -623,15 +664,16 @@ async def _allocate_request_to_donation(request_doc: Dict[str, Any]) -> Dict[str
             )
 
         await db.mark_donation_fulfilled(match["id"])
+        donor_group = matched_group(match)
 
         return {
             "matchedDonationId": match["id"],
-            "message": f"Compatible donor found ({match['details'].get('bloodGroup')})",
+            "message": f"Compatible donor found ({donor_group})",
             "details": {
                 "recipientBloodGroup": recipient_blood,
-                "donorBloodGroup": match["details"].get("bloodGroup"),
-                "city": match["details"].get("city"),
-                "hospitalPreference": match["details"].get("hospitalPreference"),
+                "donorBloodGroup":     donor_group,
+                "city":                match["details"].get("city"),
+                "hospitalPreference":  match["details"].get("hospitalPreference"),
             },
         }
 
@@ -644,7 +686,7 @@ async def _allocate_request_to_donation(request_doc: Dict[str, Any]) -> Dict[str
         available = await db.get_donations_by_category("Clothes")
 
         def matches(d):
-            d_type = d["details"].get("type")
+            d_type     = d["details"].get("type")
             type_match = (d_type == clothes_type) or (d_type == "All-season")
             size_match = (not size) or (d["details"].get("size") == size) or (d["details"].get("size") == "Mixed")
             return type_match and size_match
@@ -657,11 +699,12 @@ async def _allocate_request_to_donation(request_doc: Dict[str, Any]) -> Dict[str
 
         return {
             "matchedDonationId": match["id"],
-            "message": f"{match['details'].get('quantity')} item(s) granted",
+            "message": "1 clothing package granted",
             "details": {
-                "type": match["details"].get("type"),
-                "size": match["details"].get("size"),
-                "quantity": match["details"].get("quantity"),
+                "items": match["details"].get("items", []),
+                "type":  match["details"].get("type"),
+                "size":  match["details"].get("size"),
+                "city":  match["details"].get("city"),
             },
         }
 
@@ -671,23 +714,31 @@ async def _allocate_request_to_donation(request_doc: Dict[str, Any]) -> Dict[str
             raise HTTPException(status_code=400, detail="Medicine name is required")
 
         available = await db.get_donations_by_category("Medicine")
-        match = next(
-            (d for d in available
-             if d["details"].get("medicineName", "").strip().lower() == medicine_name.strip().lower()),
-            None
-        )
+
+        def matched_medicine(d):
+            return _single_item(d["details"], "medicines")
+
+        match  = None
+        target = medicine_name.strip().lower()
+        for d in available:
+            name = matched_medicine(d)
+            if name and name.lower() == target:
+                match = d
+                break
+
         if not match:
             raise HTTPException(status_code=404, detail=f"'{medicine_name}' is not currently available")
 
         await db.mark_donation_fulfilled(match["id"])
+        matched_name = matched_medicine(match)
 
         return {
             "matchedDonationId": match["id"],
-            "message": f"{match['details'].get('medicineName')} granted",
+            "message": f"{matched_name} package granted",
             "details": {
-                "medicineName": match["details"].get("medicineName"),
-                "quantity": match["details"].get("quantity"),
-                "expiryDate": match["details"].get("expiryDate"),
+                "medicineName": matched_name,
+                "expiryDate":   match["details"].get("expiryDate"),
+                "city":         match["details"].get("city"),
             },
         }
 
@@ -719,7 +770,7 @@ async def admin_update_request_status(request_id: str, payload: Dict[str, str]):
     elif status == "rejected":
         update_data["message"] = "Rejected by admin"
     elif status == "pending":
-        update_data["message"] = None  # reset message when moved back to pending
+        update_data["message"] = None
 
     updated = await db.update_request(request_id, update_data)
     if not updated:
@@ -810,38 +861,13 @@ async def process_recurring_donations():
             "title":        plan["title"],
             "description":  plan["description"],
             "details":      plan["details"],
-            "planId":       plan["id"],   # link back to plan
+            "planId":       plan["id"],
         }
         await db.create_donation(donation_data)
 
         # Advance nextRunDate
         new_next = _calc_next_run(today_str, plan["frequency"])
         await db.update_plan(plan["id"], {"nextRunDate": new_next})
-
-
-# =========================
-# STARTUP / SHUTDOWN
-# (replace your existing startup/shutdown events)
-# =========================
-
-@app.on_event("startup")
-async def startup_event():
-    await db.connect_to_mongo()
-    scheduler.add_job(
-        process_recurring_donations,
-        "cron",
-        hour=0,
-        minute=5,
-        id="recurring_donations",
-        replace_existing=True,
-    )
-    scheduler.start()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    await db.close_mongo_connection()
-    scheduler.shutdown(wait=False)
 
 
 # =========================
@@ -891,5 +917,3 @@ async def trigger_process():
     """Manual trigger for testing — remove or protect in production."""
     await process_recurring_donations()
     return {"message": "Recurring donations processed"}
-
-

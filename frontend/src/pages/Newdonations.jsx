@@ -5,6 +5,69 @@ import './Newdonations.css'
 const STORAGE_KEY = 'aidbridge-user'
 const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
+/* ───────────────────────────────────────────────────────────
+   Shared helper: a donation is exactly ONE package. The donor
+   just names the items that go inside it — no quantity field.
+   `itemLabel` / `itemPlaceholder` / `addLabel` let each category
+   customize the wording without duplicating the logic.
+   ─────────────────────────────────────────────────────────── */
+function renderItemListFields(form, onChange, opts) {
+  const {
+    itemsKey = 'items',
+    itemLabel = 'Items in this package',
+    itemPlaceholder = 'e.g. Item name',
+    addLabel = '+ Add item',
+  } = opts
+
+  const items = form.details[itemsKey] || []
+  const addItem = () => onChange(itemsKey, [...items, ''])
+  const updateItem = (i, val) => {
+    const next = [...items]; next[i] = val; onChange(itemsKey, next)
+  }
+  const removeItem = (i) => onChange(itemsKey, items.filter((_, idx) => idx !== i))
+
+  return (
+    <div className="nd-field">
+      <label className="nd-label">{itemLabel} <span className="nd-req">*</span></label>
+      <span className="nd-hint">This donation is one package — just list what's inside it.</span>
+      {items.map((item, i) => (
+        <div key={i} className="nd-tag-row">
+          <input
+            className="nd-input nd-input--sm"
+            placeholder={itemPlaceholder}
+            value={item}
+            onChange={e => updateItem(i, e.target.value)}
+          />
+          <button className="nd-remove" onClick={() => removeItem(i)} type="button">✕</button>
+        </div>
+      ))}
+      <button className="nd-add-btn" onClick={addItem} type="button">{addLabel}</button>
+    </div>
+  )
+}
+
+/* Shared city field used by every category */
+function CityField({ form, onChange }) {
+  return (
+    <div className="nd-field">
+      <label className="nd-label">City <span className="nd-req">*</span></label>
+      <input
+        className="nd-input"
+        placeholder="e.g. Lahore"
+        value={form.details.city || ''}
+        onChange={e => onChange('city', e.target.value)}
+      />
+    </div>
+  )
+}
+
+const itemListIsValid = (itemsKey) => (form) =>
+  (form.details[itemsKey] || []).some(i => i.trim())
+
+const itemListBuildDetails = (itemsKey) => (details) => ({
+  [itemsKey]: (details[itemsKey] || []).filter(i => i.trim()),
+})
+
 const CATEGORIES = [
   {
     id: 'Food',
@@ -12,77 +75,47 @@ const CATEGORIES = [
     label: 'Food',
     titlePlaceholder: 'e.g. Monthly ration package',
     descPlaceholder: 'Describe the food items and who they are for…',
-    renderFields: (form, onChange) => {
-      const items = form.details.items || []
-      const addItem = () => onChange('items', [...items, ''])
-      const updateItem = (i, val) => {
-        const next = [...items]; next[i] = val; onChange('items', next)
-      }
-      const removeItem = (i) => onChange('items', items.filter((_, idx) => idx !== i))
+    renderFields: (form, onChange) => (
+      <>
+        {renderItemListFields(form, onChange, {
+          itemsKey: 'items',
+          itemLabel: 'Food items',
+          itemPlaceholder: 'e.g. Rice, Flour, Oil',
+          addLabel: '+ Add item',
+        })}
 
-      return (
-        <>
-          <div className="nd-field">
-            <label className="nd-label">Food items <span className="nd-req">*</span></label>
-            {items.map((item, i) => (
-              <div key={i} className="nd-tag-row">
-                <input
-                  className="nd-input nd-input--sm"
-                  placeholder={`e.g. Rice, Flour, Oil`}
-                  value={item}
-                  onChange={e => updateItem(i, e.target.value)}
-                />
-                <button className="nd-remove" onClick={() => removeItem(i)} type="button">✕</button>
-              </div>
-            ))}
-            <button className="nd-add-btn" onClick={addItem} type="button">+ Add item</button>
-          </div>
+        <div className="nd-field">
+          <label className="nd-label">Expiry date</label>
+          <input
+            className="nd-input"
+            type="date"
+            value={form.details.expiryDate || ''}
+            onChange={e => onChange('expiryDate', e.target.value)}
+          />
+        </div>
 
-          <div className="nd-field">
-            <label className="nd-label">Number of packages <span className="nd-req">*</span></label>
+        <div className="nd-field">
+          <label className="nd-checkbox-label">
             <input
-              className="nd-input"
-              type="number"
-              min="1"
-              placeholder="e.g. 10"
-              value={form.details.quantity || ''}
-              onChange={e => onChange('quantity', e.target.value)}
+              type="checkbox"
+              className="nd-checkbox"
+              checked={!!form.details.frozen}
+              onChange={e => onChange('frozen', e.target.checked)}
             />
-          </div>
+            <span>Frozen item</span>
+            <span className="nd-checkbox-hint">Requires cold storage / freezer</span>
+          </label>
+        </div>
 
-          <div className="nd-field">
-            <label className="nd-label">Expiry date</label>
-            <input
-              className="nd-input"
-              type="date"
-              value={form.details.expiryDate || ''}
-              onChange={e => onChange('expiryDate', e.target.value)}
-            />
-          </div>
-
-          <div className="nd-field">
-            <label className="nd-checkbox-label">
-              <input
-                type="checkbox"
-                className="nd-checkbox"
-                checked={!!form.details.frozen}
-                onChange={e => onChange('frozen', e.target.checked)}
-              />
-              <span>Frozen item</span>
-              <span className="nd-checkbox-hint">Requires cold storage / freezer</span>
-            </label>
-          </div>
-        </>
-      )
-    },
-    isValid: (form) =>
-      (form.details.items || []).some(i => i.trim()) &&
-      form.details.quantity,
+        <CityField form={form} onChange={onChange} />
+      </>
+    ),
+    isValid: (form) => itemListIsValid('items')(form) && form.details.city,
     buildDetails: (details) => ({
-      items:      (details.items || []).filter(i => i.trim()),
-      quantity:   Number(details.quantity),
+      ...itemListBuildDetails('items')(details),
       expiryDate: details.expiryDate || null,
       frozen:     !!details.frozen,
+      city:       details.city || null,
     }),
   },
 
@@ -92,69 +125,41 @@ const CATEGORIES = [
     label: 'Education',
     titlePlaceholder: 'e.g. Programming Books for CS students',
     descPlaceholder: 'Who are these books for? Any specific level or institution?',
-    renderFields: (form, onChange) => {
-      const subjects = form.details.subjects || []
-      const addSubject = () => onChange('subjects', [...subjects, ''])
-      const updateSubject = (i, val) => {
-        const next = [...subjects]; next[i] = val; onChange('subjects', next)
-      }
-      const removeSubject = (i) => onChange('subjects', subjects.filter((_, idx) => idx !== i))
+    renderFields: (form, onChange) => (
+      <>
+        {renderItemListFields(form, onChange, {
+          itemsKey: 'subjects',
+          itemLabel: 'Books / subjects in this package',
+          itemPlaceholder: 'e.g. Programming, Mathematics',
+          addLabel: '+ Add subject',
+        })}
 
-      return (
-        <>
-          <div className="nd-field">
-            <label className="nd-label">Number of books <span className="nd-req">*</span></label>
-            <input
-              className="nd-input"
-              type="number"
-              min="1"
-              placeholder="e.g. 5"
-              value={form.details.bookCount || ''}
-              onChange={e => onChange('bookCount', e.target.value)}
-            />
-          </div>
+        <div className="nd-field">
+          <label className="nd-label">Grade / Level</label>
+          <select
+            className="nd-input nd-select"
+            value={form.details.grade || ''}
+            onChange={e => onChange('grade', e.target.value)}
+          >
+            <option value="">Select grade (optional)</option>
+            <option value="Primary (1–5)">Primary (1–5)</option>
+            <option value="Middle (6–8)">Middle (6–8)</option>
+            <option value="Matric (9–10)">Matric (9–10)</option>
+            <option value="Intermediate (11–12)">Intermediate (11–12)</option>
+            <option value="Undergraduate">Undergraduate</option>
+            <option value="Postgraduate">Postgraduate</option>
+            <option value="All levels">All levels</option>
+          </select>
+        </div>
 
-          <div className="nd-field">
-            <label className="nd-label">Grade / Level</label>
-            <select
-              className="nd-input nd-select"
-              value={form.details.grade || ''}
-              onChange={e => onChange('grade', e.target.value)}
-            >
-              <option value="">Select grade (optional)</option>
-              <option value="Primary (1–5)">Primary (1–5)</option>
-              <option value="Middle (6–8)">Middle (6–8)</option>
-              <option value="Matric (9–10)">Matric (9–10)</option>
-              <option value="Intermediate (11–12)">Intermediate (11–12)</option>
-              <option value="Undergraduate">Undergraduate</option>
-              <option value="Postgraduate">Postgraduate</option>
-              <option value="All levels">All levels</option>
-            </select>
-          </div>
-
-          <div className="nd-field">
-            <label className="nd-label">Subjects</label>
-            {subjects.map((s, i) => (
-              <div key={i} className="nd-tag-row">
-                <input
-                  className="nd-input nd-input--sm"
-                  placeholder="e.g. Programming"
-                  value={s}
-                  onChange={e => updateSubject(i, e.target.value)}
-                />
-                <button className="nd-remove" onClick={() => removeSubject(i)} type="button">✕</button>
-              </div>
-            ))}
-            <button className="nd-add-btn" onClick={addSubject} type="button">+ Add subject</button>
-          </div>
-        </>
-      )
-    },
-    isValid: (form) => form.details.bookCount,
+        <CityField form={form} onChange={onChange} />
+      </>
+    ),
+    isValid: (form) => itemListIsValid('subjects')(form) && form.details.city,
     buildDetails: (details) => ({
-      bookCount: Number(details.bookCount),
-      grade:     details.grade || null,
-      subjects:  (details.subjects || []).filter(s => s.trim()),
+      subjects: (details.subjects || []).filter(s => s.trim()),
+      grade:    details.grade || null,
+      city:     details.city || null,
     }),
   },
 
@@ -166,27 +171,12 @@ const CATEGORIES = [
     descPlaceholder: 'Any conditions or restrictions on use?',
     renderFields: (form, onChange) => (
       <>
-        <div className="nd-field">
-          <label className="nd-label">Medicine name <span className="nd-req">*</span></label>
-          <input
-            className="nd-input"
-            placeholder="e.g. Panadol"
-            value={form.details.medicineName || ''}
-            onChange={e => onChange('medicineName', e.target.value)}
-          />
-        </div>
-
-        <div className="nd-field">
-          <label className="nd-label">Quantity (units/strips) <span className="nd-req">*</span></label>
-          <input
-            className="nd-input"
-            type="number"
-            min="1"
-            placeholder="e.g. 20"
-            value={form.details.quantity || ''}
-            onChange={e => onChange('quantity', e.target.value)}
-          />
-        </div>
+        {renderItemListFields(form, onChange, {
+          itemsKey: 'medicines',
+          itemLabel: 'Medicines in this package',
+          itemPlaceholder: 'e.g. Panadol, Augmentin',
+          addLabel: '+ Add medicine',
+        })}
 
         <div className="nd-field">
           <label className="nd-label">Expiry date <span className="nd-req">*</span></label>
@@ -197,16 +187,15 @@ const CATEGORIES = [
             onChange={e => onChange('expiryDate', e.target.value)}
           />
         </div>
+
+        <CityField form={form} onChange={onChange} />
       </>
     ),
-    isValid: (form) =>
-      form.details.medicineName &&
-      form.details.quantity &&
-      form.details.expiryDate,
+    isValid: (form) => itemListIsValid('medicines')(form) && form.details.expiryDate && form.details.city,
     buildDetails: (details) => ({
-      medicineName: details.medicineName,
-      quantity: Number(details.quantity),
+      medicines:  (details.medicines || []).filter(m => m.trim()),
       expiryDate: details.expiryDate,
+      city:       details.city || null,
     }),
   },
 
@@ -281,15 +270,23 @@ const CATEGORIES = [
             onChange={e => onChange('accountName', e.target.value)}
           />
         </div>
+
+        <CityField form={form} onChange={onChange} />
       </>
     ),
-    isValid: (form) => form.details.amount && form.details.currency && form.details.transferMethod && form.details.accountNumber,
+    isValid: (form) =>
+      form.details.amount &&
+      form.details.currency &&
+      form.details.transferMethod &&
+      form.details.accountNumber &&
+      form.details.city,
     buildDetails: (details) => ({
       amount:         Number(details.amount),
       currency:       details.currency || 'PKR',
       transferMethod: details.transferMethod,
       accountNumber:  details.accountNumber,
       accountName:    details.accountName || null,
+      city:           details.city || null,
     }),
   },
 
@@ -302,14 +299,14 @@ const CATEGORIES = [
     renderFields: (form, onChange) => (
       <>
         <div className="nd-field">
-          <label className="nd-label">Blood group <span className="nd-req">*</span></label>
+          <label className="nd-label">Blood Group <span className="nd-req">*</span></label>
           <select
             className="nd-input nd-select"
             value={form.details.bloodGroup || ''}
             onChange={e => onChange('bloodGroup', e.target.value)}
           >
             <option value="" disabled>Select blood group</option>
-            {['A+','A−','B+','B−','AB+','AB−','O+','O−'].map(g => (
+            {['O-', 'O+', 'A-', 'A+', 'B-', 'B+', 'AB-', 'AB+'].map(g => (
               <option key={g} value={g}>{g}</option>
             ))}
           </select>
@@ -338,8 +335,8 @@ const CATEGORIES = [
     ),
     isValid: (form) => form.details.bloodGroup && form.details.city,
     buildDetails: (details) => ({
-      bloodGroup: details.bloodGroup,
-      city: details.city,
+      bloodGroups:        [details.bloodGroup].filter(Boolean),
+      city:               details.city,
       hospitalPreference: details.hospitalPreference || '',
     }),
   },
@@ -352,6 +349,13 @@ const CATEGORIES = [
     descPlaceholder: 'Condition of clothes, any special notes?',
     renderFields: (form, onChange) => (
       <>
+        {renderItemListFields(form, onChange, {
+          itemsKey: 'items',
+          itemLabel: 'Clothing items in this package',
+          itemPlaceholder: 'e.g. Jackets, Sweaters',
+          addLabel: '+ Add item',
+        })}
+
         <div className="nd-field">
           <label className="nd-label">Type <span className="nd-req">*</span></label>
           <select
@@ -370,38 +374,28 @@ const CATEGORIES = [
         </div>
 
         <div className="nd-field">
-          <label className="nd-label">Size <span className="nd-req">*</span></label>
+          <label className="nd-label">Size</label>
           <select
             className="nd-input nd-select"
             value={form.details.size || ''}
             onChange={e => onChange('size', e.target.value)}
           >
             <option value="" disabled>Select size</option>
-            {['XS','S','M','L','XL','XXL','Mixed'].map(s => (
+            {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'Mixed'].map(s => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
         </div>
 
-        <div className="nd-field">
-          <label className="nd-label">Quantity (pieces) <span className="nd-req">*</span></label>
-          <input
-            className="nd-input"
-            type="number"
-            min="1"
-            placeholder="e.g. 15"
-            value={form.details.quantity || ''}
-            onChange={e => onChange('quantity', e.target.value)}
-          />
-        </div>
+        <CityField form={form} onChange={onChange} />
       </>
     ),
-    isValid: (form) =>
-      form.details.type && form.details.size && form.details.quantity,
+    isValid: (form) => itemListIsValid('items')(form) && form.details.type && form.details.city,
     buildDetails: (details) => ({
-      type: details.type,
-      size: details.size,
-      quantity: Number(details.quantity),
+      items: (details.items || []).filter(i => i.trim()),
+      type:  details.type,
+      size:  details.size || null,
+      city:  details.city || null,
     }),
   },
 ]
@@ -542,7 +536,6 @@ export default function NewDonation() {
       const builtDetails = cat.buildDetails(form.details)
 
       if (recurring.enabled) {
-        // Create a donation PLAN instead of a one-off donation
         const payload = {
           donorId:     user.id,
           category:    cat.id,
@@ -563,7 +556,6 @@ export default function NewDonation() {
           throw new Error(data.detail || 'Failed to create donation plan')
         }
       } else {
-        // Regular one-time donation
         const payload = {
           donorId:     user.id,
           category:    cat.id,
@@ -614,7 +606,12 @@ export default function NewDonation() {
                   View My Plans
                 </button>
               )}
-              <button className="nd-btn nd-btn--ghost" onClick={() => { setSuccess(false); setStep(1); setCat(null); setRecurring({ enabled: false, frequency: 'monthly', startDate: today, endDate: '' }) }}>
+              <button className="nd-btn nd-btn--ghost" onClick={() => {
+                setSuccess(false)
+                setStep(1)
+                setCat(null)
+                setRecurring({ enabled: false, frequency: 'monthly', startDate: today, endDate: '' })
+              }}>
                 Donate again
               </button>
             </div>
@@ -726,8 +723,8 @@ export default function NewDonation() {
               {recurring.enabled && (
                 <>
                   <div className="nd-review__divider" />
-                  <ReviewRow label="🔁 Schedule"  value={`${recurring.frequency.charAt(0).toUpperCase() + recurring.frequency.slice(1)}`} />
-                  <ReviewRow label="Starts"       value={recurring.startDate} />
+                  <ReviewRow label="🔁 Schedule" value={`${recurring.frequency.charAt(0).toUpperCase() + recurring.frequency.slice(1)}`} />
+                  <ReviewRow label="Starts"      value={recurring.startDate} />
                   {recurring.endDate && <ReviewRow label="Ends" value={recurring.endDate} />}
                 </>
               )}
