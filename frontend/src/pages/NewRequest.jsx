@@ -179,7 +179,7 @@ const CATEGORIES = [
     id: 'Medicine',
     icon: '💊',
     label: 'Medicine',
-    description: 'Request a specific medicine if currently available.',
+    description: 'Request a specific medicine. If it is not available right now, your request will be submitted and reviewed.',
     renderFields: (form, onChange) => (
       <div className="nd-field">
         <label className="nd-label">Medicine name <span className="nd-req">*</span></label>
@@ -277,14 +277,18 @@ export default function NewRequest() {
   }
 
   if (result) {
+    const title = result.status === 'pending' ? 'Request submitted!' : 'Request fulfilled!'
+    const message = result.message || (result.status === 'pending'
+      ? 'Your request is pending review. If the requested item is not available, we will get back to you.'
+      : 'Your request has been granted.')
     return (
       <div className="nd-root">
         <Sidebar user={user} navigate={navigate} />
         <main className="nd-main">
           <div className="nd-success">
             <div className="nd-success__icon">🎉</div>
-            <h2>Request fulfilled!</h2>
-            <p>{result.message}</p>
+            <h2>{title}</h2>
+            <p>{message}</p>
 
             <div className="nd-review" style={{ textAlign: 'left', marginBottom: '32px' }}>
               {Object.entries(result.details)

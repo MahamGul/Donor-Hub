@@ -36,11 +36,23 @@ async def close_mongo_connection():
 # HELPERS
 # =========================
 
+def _serialize_value(value: Any) -> Any:
+    if isinstance(value, ObjectId):
+        return str(value)
+    if isinstance(value, dict):
+        return {k: _serialize_value(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_serialize_value(v) for v in value]
+    return value
+
+
 def _serialize(doc: Dict[str, Any]) -> Dict[str, Any]:
-    """Convert _id ObjectId to string id and remove _id."""
-    doc["id"] = str(doc.get("_id"))
-    doc.pop("_id", None)
-    return doc
+    """Convert BSON values to JSON-safe primitives and normalize document id."""
+    serialized = {k: _serialize_value(v) for k, v in doc.items()}
+    if serialized.get("_id") is not None:
+        serialized["id"] = str(serialized["_id"])
+        serialized.pop("_id", None)
+    return serialized
 
 
 # =========================
@@ -235,6 +247,19 @@ async def update_donation_amount(donation_id: str, new_amount: float) -> None:
     await _db.donations.update_one({"_id": oid}, update)
 
 
+async def update_donation_status(donation_id: str, status: str) -> Optional[Dict[str, Any]]:
+    await connect_to_mongo()
+    try:
+        oid = ObjectId(donation_id)
+    except Exception:
+        return None
+    await _db.donations.update_one({"_id": oid}, {"$set": {"status": status}})
+    donation = await _db.donations.find_one({"_id": oid})
+    if not donation:
+        return None
+    return _serialize(donation)
+
+
 # =========================
 # REQUESTS
 # =========================
@@ -257,15 +282,56 @@ async def get_requests_by_recipient(recipient_id: str) -> List[Dict[str, Any]]:
     return docs
 
 
+async def get_request_by_id(request_id: str) -> Optional[Dict[str, Any]]:
+    await connect_to_mongo()
+    try:
+        oid = ObjectId(request_id)
+    except Exception:
+        return None
+    doc = await _db.requests.find_one({"_id": oid})
+    if not doc:
+        return None
+    return _serialize(doc)
+
+
 async def create_request(request_dict: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     await connect_to_mongo()
-    request_dict.setdefault("status", "granted")
+    request_dict.setdefault("status", "pending")
+    request_dict.setdefault("message", "Pending admin approval")
     request_dict.setdefault("createdAt", datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     res = await _db.requests.insert_one(request_dict)
     new = await _db.requests.find_one({"_id": res.inserted_id})
     if new:
         return _serialize(new)
     return None
+
+
+async def update_request(request_id: str, update_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    await connect_to_mongo()
+    try:
+        oid = ObjectId(request_id)
+    except Exception:
+        return None
+    await _db.requests.update_one({"_id": oid}, {"$set": update_data})
+    request_doc = await _db.requests.find_one({"_id": oid})
+    if not request_doc:
+        return None
+    return _serialize(request_doc)
+
+
+async def update_request_status(request_id: str, status: str) -> Optional[Dict[str, Any]]:
+    return await update_request(request_id, {"status": status})
+
+
+async def delete_request(request_id: str) -> bool:
+    await connect_to_mongo()
+    try:
+        oid = ObjectId(request_id)
+    except Exception:
+        return False
+    result = await _db.requests.delete_one({"_id": oid})
+    return result.deleted_count > 0
+
 
 # =========================
 # FEEDBACK
@@ -332,8 +398,11 @@ async def get_all_users():
 
     users = await _db.users.find().to_list(length=1000)
 
+    sanitized = []
     for user in users:
         user["id"] = str(user["_id"])
         user.pop("_id", None)
+        user.pop("password", None)
+        sanitized.append(user)
 
-    return users
+    return sanitized

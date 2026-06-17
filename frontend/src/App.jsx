@@ -18,6 +18,11 @@ import DonorFeedback from './pages/DonorFeedback'
 import AdminLayout from './pages/AdminLayout'
 import AdminDashboard from './pages/AdminDashboard'
 import AdminDonations from './pages/AdminDonations'
+import AdminRequests from './pages/AdminRequests'
+import AdminUsers from './pages/AdminUsers'
+import AdminExpiry from './pages/AdminExpiry'
+import RequireAdmin from './components/RequireAdmin'
+
 // A small wrapper that picks the right page based on stored user role
 function Feedback() {
   const saved = localStorage.getItem('aidbridge-user')
@@ -49,17 +54,20 @@ function App() {
       <Route path="/feedback" element={<ProtectedRoute><Feedback /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
       <Route
-  path="/admin"
-  element={
-    <ProtectedRoute>
-      <AdminLayout />
-    </ProtectedRoute>
-  }
->
-  <Route index element={<AdminDashboard />} />
-  <Route path="dashboard" element={<AdminDashboard />} />
-  <Route path="donations" element={<AdminDonations />} />
-</Route>
+        path="/admin"
+        element={
+          <RequireAdmin>
+            <AdminLayout />
+          </RequireAdmin>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="dashboard" element={<AdminDashboard />} />
+        <Route path="donations" element={<AdminDonations />} />
+        <Route path="requests" element={<AdminRequests />} />
+        <Route path="users" element={<AdminUsers />} />
+        <Route path="expiry" element={<AdminExpiry />} />
+      </Route>
     </Routes>
   )
 }

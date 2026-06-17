@@ -22,6 +22,10 @@ function statusBadge(status) {
   return map[status] || 'badge badge-gray'
 }
 
+function extractDonationId(donation) {
+  return donation.id || donation._id?.$oid || donation._id || ''
+}
+
 function AdminDonations() {
   const [donations, setDonations] = useState([])
   const [loading,   setLoading]   = useState(true)
@@ -56,7 +60,7 @@ function AdminDonations() {
       })
       if (!res.ok) throw new Error()
       setDonations(prev =>
-        prev.map(d => (d._id?.$oid || d._id) === id ? { ...d, status } : d)
+        prev.map(d => extractDonationId(d) === id ? { ...d, status } : d)
       )
     } catch {
       alert('Failed to update status. Please try again.')
@@ -70,7 +74,7 @@ function AdminDonations() {
         method: 'DELETE', headers,
       })
       if (!res.ok) throw new Error()
-      setDonations(prev => prev.filter(d => (d._id?.$oid || d._id) !== id))
+      setDonations(prev => prev.filter(d => extractDonationId(d) !== id))
     } catch {
       alert('Failed to delete donation.')
     }
@@ -153,7 +157,7 @@ function AdminDonations() {
                     <td colSpan={7} className="ap-empty">No donations match your filters.</td>
                   </tr>
                 ) : filtered.map(d => {
-                  const id = d._id?.$oid || d._id
+                  const id = extractDonationId(d)
                   return (
                     <tr key={id}>
                       <td style={{ fontWeight: 500 }}>
@@ -171,7 +175,9 @@ function AdminDonations() {
                           value={d.status}
                           onChange={e => updateStatus(id, e.target.value)}
                         >
-                          {ALL_STATUSES.map(s => <option key={s}>{s}</option>)}
+                          {ALL_STATUSES.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
                         </select>
                       </td>
                       <td>
