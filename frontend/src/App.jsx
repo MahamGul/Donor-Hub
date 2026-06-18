@@ -23,6 +23,7 @@ import AdminRequests from './pages/AdminRequests'
 import AdminUsers from './pages/AdminUsers'
 import AdminExpiry from './pages/AdminExpiry'
 import RequireAdmin from './components/RequireAdmin'
+import DonorSettings from './pages/DonorSettings'
 
 // A small wrapper that picks the right page based on stored user role
 function Feedback() {
@@ -45,6 +46,14 @@ function App() {
       <Route path="/dashboard/donations" element={<ProtectedRoute><DonorDonations /></ProtectedRoute>} />
       <Route path="/dashboard/plans" element={<ProtectedRoute><RecurringPlans /></ProtectedRoute>} />
       <Route path="/dashboard/impact" element={<ProtectedRoute><DonorImpact /></ProtectedRoute>} />
+      <Route
+  path="/dashboard/donor-settings"
+  element={
+    <ProtectedRoute>
+      <DonorSettings />
+    </ProtectedRoute>
+  }
+/>
 
       <Route path="/donations/new" element={<ProtectedRoute><NewDonation /></ProtectedRoute>} />
 

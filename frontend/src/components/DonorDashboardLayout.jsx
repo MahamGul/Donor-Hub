@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { id: 'plans',     icon: '🔁', label: 'My Plans',     link: '/dashboard/plans' },
   { id: 'impact',    icon: '📊', label: 'Impact',       link: '/dashboard/impact' },
   { id: 'feedback',  icon: '💬', label: 'Feedback',     link: '/feedback' },
-  { id: 'settings',  icon: '⚙️', label: 'Settings',     link: '/dashboard/settings' },
+  { id: 'settings', icon: '⚙️', label: 'Settings', link: '/dashboard/donor-settings' },
 ]
 
 // Keys here must match the category `id`s used in Newdonations.jsx's
