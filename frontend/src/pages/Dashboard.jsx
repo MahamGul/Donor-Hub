@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getDonorDonations, getUser } from '../api'
 import DonorDashboardLayout from '../components/DonorDashboardLayout'
+import RecipientChatbot from './RecipientChatbot'
 import './Dashboard.css'
 
 const STORAGE_KEY = 'aidbridge-user'
@@ -210,6 +211,7 @@ function RecipientDashboard({ user }) {
           <Link to="/requests/new" className="dash-action__btn">+ New Request</Link>
         </section>
       </main>
+      <RecipientChatbot />
     </div>
   )
 }

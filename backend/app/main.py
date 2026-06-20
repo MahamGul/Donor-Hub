@@ -6,9 +6,11 @@ from datetime import datetime, timezone, timedelta
 from secrets import token_urlsafe
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dateutil.relativedelta import relativedelta
-
+import os
+from groq import Groq
 from . import db
-
+from dotenv import load_dotenv
+load_dotenv()
 app = FastAPI(title="Donor Hub Backend")
 scheduler = AsyncIOScheduler()
 
@@ -917,3 +919,103 @@ async def trigger_process():
     """Manual trigger for testing — remove or protect in production."""
     await process_recurring_donations()
     return {"message": "Recurring donations processed"}
+
+
+# =========================
+# CHATBOT (add these imports at the top of main.py)
+# =========================
+# import os
+# from groq import Groq
+
+# =========================
+# CHATBOT MODEL
+# =========================
+
+class ChatMessageIn(BaseModel):
+    message: str
+    history: List[Dict[str, str]] = []   # [{"role": "user"/"assistant", "content": "..."}]
+
+
+# =========================
+# CHATBOT ROUTE
+# =========================
+
+@app.post("/chatbot")
+async def chatbot(payload: ChatMessageIn):
+    """
+    Recipient-side FAQ chatbot powered by Groq.
+    Reads GROQ_API_KEY from environment (.env file via python-dotenv).
+    """
+    import os
+    try:
+        from groq import Groq
+    except ImportError:
+        raise HTTPException(status_code=500, detail="groq package not installed. Run: pip install groq")
+
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY not set in environment")
+
+    client = Groq(api_key=api_key)
+
+    SYSTEM_PROMPT = """You are AidBridge Assistant, a friendly and helpful support bot for AidBridge — a donation and aid matching platform. You help RECIPIENTS (people receiving aid) navigate the platform.
+
+You only answer questions related to AidBridge features. If asked about anything unrelated, politely redirect the conversation.
+
+Here is everything you know about what recipients can do on AidBridge:
+
+## Making a Request
+- Recipients can submit a new aid request by clicking "New Request" from the sidebar or dashboard.
+- Available categories: Food, Medicine, Blood, Clothes, Education, Funds.
+- Each category has its own form fields (e.g., blood group for Blood, medicine name for Medicine).
+- After submitting, the request status starts as "Pending" and is reviewed by an admin.
+
+## Tracking Requests
+- Recipients can view all their requests under "My Requests" in the sidebar.
+- They can also go to "Track Requests" to see detailed status updates.
+- Possible statuses: Pending (waiting for admin review), Granted (matched with a donation), Rejected (not fulfilled at this time).
+
+## Giving Feedback
+- Recipients can submit feedback about their experience by clicking "Feedback" in the sidebar.
+- Feedback can be submitted anonymously if preferred.
+- Feedback helps improve the platform and is shared with donors.
+
+## Account / Settings
+- Recipients can update their profile (name, email, phone, city, bio) under "Settings".
+- Notification and privacy preferences can also be managed in Settings.
+- To sign out, click the "Sign Out" button at the bottom of the sidebar.
+
+## Request Status Meanings
+- Pending: Your request has been submitted and is awaiting admin review.
+- Granted: Great news! Your request has been matched with an available donation.
+- Rejected: Your request could not be fulfilled at this time. You can submit a new request later.
+
+## General
+- AidBridge connects people in need with verified donors.
+- All donations are manually reviewed and matched by admins.
+- If you have an urgent need, submit a request and our team will prioritize it.
+- For technical issues, contact support through the Settings page.
+
+Keep responses concise, warm, and helpful. Use simple language. If unsure, say "I'm not sure about that — please contact our support team through the Settings page."
+"""
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+
+    # Include conversation history (last 10 messages max to stay within context)
+    for msg in payload.history[-10:]:
+        if msg.get("role") in ("user", "assistant") and msg.get("content"):
+            messages.append({"role": msg["role"], "content": msg["content"]})
+
+    messages.append({"role": "user", "content": payload.message})
+
+    try:
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=messages,
+            max_tokens=300,
+            temperature=0.5,
+        )
+        reply = response.choices[0].message.content.strip()
+        return {"reply": reply}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Groq API error: {str(e)}")
