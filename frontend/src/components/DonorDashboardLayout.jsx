@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { getDonorDonations, getUser } from '../api'
+import DonorChatbot from '../pages/DonorChatbot'
 import '../pages/Dashboard.css'
 
 const STORAGE_KEY = 'aidbridge-user'
@@ -15,11 +16,6 @@ const NAV_ITEMS = [
   { id: 'settings', icon: '⚙️', label: 'Settings', link: '/dashboard/donor-settings' },
 ]
 
-// Keys here must match the category `id`s used in Newdonations.jsx's
-// CATEGORIES array (Food, Education, Medicine, Funds, Blood, Clothes).
-// Previously this had "Clothing"/"Financial"/"Health", which never matched
-// a real donation.category value, so Clothes and Blood donations always
-// fell back to the generic 📦 icon below.
 const CATEGORY_ICONS = {
   Food: '🍲',
   Education: '📚',
@@ -37,9 +33,6 @@ function normalizeDonation(donation) {
   const location = rawDetails.city || rawDetails.location || rawDetails.country || '—'
   const amount = rawDetails.amount ? `${rawDetails.amount} ${rawDetails.currency || ''}`.trim() : null
   const quantity = rawDetails.quantity ? `${rawDetails.quantity}` : null
-  // Blood and Education donations don't have a generic "quantity" field
-  // (they use bloodGroup / bookCount instead), so without these fallbacks
-  // their impact column always showed "—".
   const impact = amount || quantity || rawDetails.peopleHelped || rawDetails.bloodGroup || rawDetails.bookCount || '—'
   const note = donation.description || rawDetails.notes || rawDetails.note || 'No notes provided.'
   let status = donation.status ? donation.status.charAt(0).toUpperCase() + donation.status.slice(1) : 'Pending'
@@ -151,6 +144,8 @@ function DonorDashboardLayout({ activePage, children }) {
           ? children({ user, donations, onUserUpdate: handleUserUpdate, setDonations })
           : children}
       </main>
+
+      <DonorChatbot />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import DonorDashboardLayout from '../components/DonorDashboardLayout'
 import './Newdonations.css'
 
 const STORAGE_KEY = 'aidbridge-user'
@@ -8,19 +9,17 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 /* ───────────────────────────────────────────────────────────
    Shared helper: a donation is exactly ONE package. The donor
    just names the items that go inside it — no quantity field.
-   `itemLabel` / `itemPlaceholder` / `addLabel` let each category
-   customize the wording without duplicating the logic.
    ─────────────────────────────────────────────────────────── */
 function renderItemListFields(form, onChange, opts) {
   const {
-    itemsKey = 'items',
-    itemLabel = 'Items in this package',
+    itemsKey    = 'items',
+    itemLabel   = 'Items in this package',
     itemPlaceholder = 'e.g. Item name',
-    addLabel = '+ Add item',
+    addLabel    = '+ Add item',
   } = opts
 
-  const items = form.details[itemsKey] || []
-  const addItem = () => onChange(itemsKey, [...items, ''])
+  const items      = form.details[itemsKey] || []
+  const addItem    = () => onChange(itemsKey, [...items, ''])
   const updateItem = (i, val) => {
     const next = [...items]; next[i] = val; onChange(itemsKey, next)
   }
@@ -61,7 +60,7 @@ function CityField({ form, onChange }) {
   )
 }
 
-const itemListIsValid = (itemsKey) => (form) =>
+const itemListIsValid    = (itemsKey) => (form) =>
   (form.details[itemsKey] || []).some(i => i.trim())
 
 const itemListBuildDetails = (itemsKey) => (details) => ({
@@ -74,14 +73,14 @@ const CATEGORIES = [
     icon: '🍲',
     label: 'Food',
     titlePlaceholder: 'e.g. Monthly ration package',
-    descPlaceholder: 'Describe the food items and who they are for…',
+    descPlaceholder:  'Describe the food items and who they are for…',
     renderFields: (form, onChange) => (
       <>
         {renderItemListFields(form, onChange, {
-          itemsKey: 'items',
-          itemLabel: 'Food items',
+          itemsKey:        'items',
+          itemLabel:       'Food items',
           itemPlaceholder: 'e.g. Rice, Flour, Oil',
-          addLabel: '+ Add item',
+          addLabel:        '+ Add item',
         })}
 
         <div className="nd-field">
@@ -124,14 +123,14 @@ const CATEGORIES = [
     icon: '📚',
     label: 'Education',
     titlePlaceholder: 'e.g. Programming Books for CS students',
-    descPlaceholder: 'Who are these books for? Any specific level or institution?',
+    descPlaceholder:  'Who are these books for? Any specific level or institution?',
     renderFields: (form, onChange) => (
       <>
         {renderItemListFields(form, onChange, {
-          itemsKey: 'subjects',
-          itemLabel: 'Books / subjects in this package',
+          itemsKey:        'subjects',
+          itemLabel:       'Books / subjects in this package',
           itemPlaceholder: 'e.g. Programming, Mathematics',
-          addLabel: '+ Add subject',
+          addLabel:        '+ Add subject',
         })}
 
         <div className="nd-field">
@@ -168,14 +167,14 @@ const CATEGORIES = [
     icon: '💊',
     label: 'Medicine',
     titlePlaceholder: 'e.g. Basic medicines for clinic',
-    descPlaceholder: 'Any conditions or restrictions on use?',
+    descPlaceholder:  'Any conditions or restrictions on use?',
     renderFields: (form, onChange) => (
       <>
         {renderItemListFields(form, onChange, {
-          itemsKey: 'medicines',
-          itemLabel: 'Medicines in this package',
+          itemsKey:        'medicines',
+          itemLabel:       'Medicines in this package',
           itemPlaceholder: 'e.g. Panadol, Augmentin',
-          addLabel: '+ Add medicine',
+          addLabel:        '+ Add medicine',
         })}
 
         <div className="nd-field">
@@ -204,7 +203,7 @@ const CATEGORIES = [
     icon: '💰',
     label: 'Funds',
     titlePlaceholder: 'e.g. Educational financial aid',
-    descPlaceholder: 'What should the funds be used for?',
+    descPlaceholder:  'What should the funds be used for?',
     renderFields: (form, onChange) => (
       <>
         <div className="nd-field">
@@ -295,7 +294,7 @@ const CATEGORIES = [
     icon: '🩸',
     label: 'Blood',
     titlePlaceholder: 'e.g. Emergency blood donation available',
-    descPlaceholder: 'Any availability windows or contact preferences?',
+    descPlaceholder:  'Any availability windows or contact preferences?',
     renderFields: (form, onChange) => (
       <>
         <div className="nd-field">
@@ -346,14 +345,14 @@ const CATEGORIES = [
     icon: '👕',
     label: 'Clothes',
     titlePlaceholder: 'e.g. Winter clothes for needy families',
-    descPlaceholder: 'Condition of clothes, any special notes?',
+    descPlaceholder:  'Condition of clothes, any special notes?',
     renderFields: (form, onChange) => (
       <>
         {renderItemListFields(form, onChange, {
-          itemsKey: 'items',
-          itemLabel: 'Clothing items in this package',
+          itemsKey:        'items',
+          itemLabel:       'Clothing items in this package',
           itemPlaceholder: 'e.g. Jackets, Sweaters',
-          addLabel: '+ Add item',
+          addLabel:        '+ Add item',
         })}
 
         <div className="nd-field">
@@ -486,11 +485,9 @@ function RecurringSection({ recurring, onChange }) {
   )
 }
 
-/* ═══════════════════════════════════════════════════════════ */
-export default function NewDonation() {
-  const navigate = useNavigate()
-  const userRaw  = localStorage.getItem(STORAGE_KEY)
-  const user     = userRaw ? JSON.parse(userRaw) : null
+/* ── Inner content component (needs hooks, receives user from layout) ── */
+function NewDonationContent({ user, navigate }) {
+  const today = new Date().toISOString().split('T')[0]
 
   const [step,    setStep]    = useState(1)
   const [cat,     setCat]     = useState(null)
@@ -498,19 +495,12 @@ export default function NewDonation() {
   const [loading, setLoading] = useState(false)
   const [error,   setError]   = useState('')
   const [success, setSuccess] = useState(false)
-
-  const today = new Date().toISOString().split('T')[0]
   const [recurring, setRecurring] = useState({
     enabled:   false,
     frequency: 'monthly',
     startDate: today,
     endDate:   '',
   })
-
-  if (!user || user.role !== 'donor') {
-    navigate('/login/donor')
-    return null
-  }
 
   const handleCatSelect = (c) => {
     setCat(c)
@@ -585,195 +575,177 @@ export default function NewDonation() {
   /* ── Success screen ── */
   if (success) {
     return (
-      <div className="nd-root">
-        <Sidebar user={user} navigate={navigate} />
-        <main className="nd-main">
-          <div className="nd-success">
-            <div className="nd-success__icon">{recurring.enabled ? '🔁' : '🎉'}</div>
-            <h2>{recurring.enabled ? 'Recurring plan created!' : 'Donation submitted!'}</h2>
-            <p>
-              {recurring.enabled
-                ? `Your ${recurring.frequency} ${cat.label.toLowerCase()} donation is scheduled. The first one runs on ${recurring.startDate}.`
-                : `Thank you, ${user.name.split(' ')[0]}. Your donation has been logged and will be matched with a recipient soon.`
-              }
-            </p>
-            <div className="nd-success__actions">
-              <button className="nd-btn nd-btn--primary" onClick={() => navigate('/dashboard')}>
-                Back to Dashboard
-              </button>
-              {recurring.enabled && (
-                <button className="nd-btn nd-btn--ghost" onClick={() => navigate('/dashboard/plans')}>
-                  View My Plans
-                </button>
-              )}
-              <button className="nd-btn nd-btn--ghost" onClick={() => {
-                setSuccess(false)
-                setStep(1)
-                setCat(null)
-                setRecurring({ enabled: false, frequency: 'monthly', startDate: today, endDate: '' })
-              }}>
-                Donate again
-              </button>
-            </div>
-          </div>
-        </main>
+      <div className="nd-success">
+        <div className="nd-success__icon">{recurring.enabled ? '🔁' : '🎉'}</div>
+        <h2>{recurring.enabled ? 'Recurring plan created!' : 'Donation submitted!'}</h2>
+        <p>
+          {recurring.enabled
+            ? `Your ${recurring.frequency} ${cat.label.toLowerCase()} donation is scheduled. The first one runs on ${recurring.startDate}.`
+            : `Thank you, ${user.name.split(' ')[0]}. Your donation has been logged and will be matched with a recipient soon.`
+          }
+        </p>
+        <div className="nd-success__actions">
+          <button className="nd-btn nd-btn--primary" onClick={() => navigate('/dashboard')}>
+            Back to Dashboard
+          </button>
+          {recurring.enabled && (
+            <button className="nd-btn nd-btn--ghost" onClick={() => navigate('/dashboard/plans')}>
+              View My Plans
+            </button>
+          )}
+          <button className="nd-btn nd-btn--ghost" onClick={() => {
+            setSuccess(false)
+            setStep(1)
+            setCat(null)
+            setRecurring({ enabled: false, frequency: 'monthly', startDate: today, endDate: '' })
+          }}>
+            Donate again
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="nd-root">
-      <Sidebar user={user} navigate={navigate} />
+    <>
+      {/* ── Header ── */}
+      <header className="nd-header">
+        <div>
+          <p className="nd-eyebrow">💛 Donor Account</p>
+          <h1 className="nd-title">New Donation</h1>
+        </div>
+        <div className="nd-steps">
+          <StepDot n={1} current={step} />
+          <div className="nd-steps__line" />
+          <StepDot n={2} current={step} />
+          <div className="nd-steps__line" />
+          <StepDot n={3} current={step} />
+        </div>
+      </header>
 
-      <main className="nd-main">
-
-        {/* ── Header ── */}
-        <header className="nd-header">
-          <div>
-            <p className="nd-eyebrow">💛 Donor Account</p>
-            <h1 className="nd-title">New Donation</h1>
-          </div>
-          <div className="nd-steps">
-            <StepDot n={1} current={step} />
-            <div className="nd-steps__line" />
-            <StepDot n={2} current={step} />
-            <div className="nd-steps__line" />
-            <StepDot n={3} current={step} />
-          </div>
-        </header>
-
-        {/* ── Step 1: pick category ── */}
-        {step === 1 && (
-          <section className="nd-section">
-            <h2 className="nd-section__title">What would you like to donate?</h2>
-            <div className="nd-cat-grid">
-              {CATEGORIES.map(c => (
-                <button key={c.id} className="nd-cat-card" onClick={() => handleCatSelect(c)}>
-                  <span className="nd-cat-card__icon">{c.icon}</span>
-                  <span className="nd-cat-card__label">{c.label}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ── Step 2: fill details ── */}
-        {step === 2 && cat && (
-          <section className="nd-section">
-            <button className="nd-back" onClick={() => setStep(1)}>← Back</button>
-            <h2 className="nd-section__title">{cat.icon} {cat.label}</h2>
-
-            <div className="nd-form">
-              <div className="nd-field">
-                <label className="nd-label">Title <span className="nd-req">*</span></label>
-                <input
-                  className="nd-input"
-                  placeholder={cat.titlePlaceholder}
-                  value={form.title}
-                  onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-                />
-              </div>
-
-              <div className="nd-field">
-                <label className="nd-label">Description</label>
-                <textarea
-                  className="nd-input nd-textarea"
-                  rows={3}
-                  placeholder={cat.descPlaceholder}
-                  value={form.description}
-                  onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
-                />
-              </div>
-
-              {/* Category-specific fields */}
-              {cat.renderFields(form, handleDetailChange)}
-
-              {/* ── Recurring section ── */}
-              <RecurringSection recurring={recurring} onChange={setRecurring} />
-
-              <button
-                className="nd-btn nd-btn--primary nd-btn--full"
-                disabled={!canProceed()}
-                onClick={() => setStep(3)}
-              >
-                Review Donation →
+      {/* ── Step 1: pick category ── */}
+      {step === 1 && (
+        <section className="nd-section">
+          <h2 className="nd-section__title">What would you like to donate?</h2>
+          <div className="nd-cat-grid">
+            {CATEGORIES.map(c => (
+              <button key={c.id} className="nd-cat-card" onClick={() => handleCatSelect(c)}>
+                <span className="nd-cat-card__icon">{c.icon}</span>
+                <span className="nd-cat-card__label">{c.label}</span>
               </button>
-            </div>
-          </section>
-        )}
+            ))}
+          </div>
+        </section>
+      )}
 
-        {/* ── Step 3: confirm ── */}
-        {step === 3 && cat && (
-          <section className="nd-section">
-            <button className="nd-back" onClick={() => setStep(2)}>← Back</button>
-            <h2 className="nd-section__title">Review & Confirm</h2>
+      {/* ── Step 2: fill details ── */}
+      {step === 2 && cat && (
+        <section className="nd-section">
+          <button className="nd-back" onClick={() => setStep(1)}>← Back</button>
+          <h2 className="nd-section__title">{cat.icon} {cat.label}</h2>
 
-            <div className="nd-review">
-              <ReviewRow label="Category"    value={`${cat.icon} ${cat.label}`} />
-              <ReviewRow label="Title"       value={form.title} />
-              <ReviewRow label="Description" value={form.description} />
-
-              {Object.entries(form.details)
-                .filter(([, v]) => v !== '' && v !== undefined && !(Array.isArray(v) && v.length === 0))
-                .map(([k, v]) => (
-                  <ReviewRow key={k} label={k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())} value={v} />
-                ))
-              }
-
-              {recurring.enabled && (
-                <>
-                  <div className="nd-review__divider" />
-                  <ReviewRow label="🔁 Schedule" value={`${recurring.frequency.charAt(0).toUpperCase() + recurring.frequency.slice(1)}`} />
-                  <ReviewRow label="Starts"      value={recurring.startDate} />
-                  {recurring.endDate && <ReviewRow label="Ends" value={recurring.endDate} />}
-                </>
-              )}
-
-              <ReviewRow label="Donor" value={user.name} />
+          <div className="nd-form">
+            <div className="nd-field">
+              <label className="nd-label">Title <span className="nd-req">*</span></label>
+              <input
+                className="nd-input"
+                placeholder={cat.titlePlaceholder}
+                value={form.title}
+                onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+              />
             </div>
 
-            {error && <p className="nd-error">{error}</p>}
+            <div className="nd-field">
+              <label className="nd-label">Description</label>
+              <textarea
+                className="nd-input nd-textarea"
+                rows={3}
+                placeholder={cat.descPlaceholder}
+                value={form.description}
+                onChange={e => setForm(p => ({ ...p, description: e.target.value }))}
+              />
+            </div>
+
+            {/* Category-specific fields */}
+            {cat.renderFields(form, handleDetailChange)}
+
+            {/* ── Recurring section ── */}
+            <RecurringSection recurring={recurring} onChange={setRecurring} />
 
             <button
               className="nd-btn nd-btn--primary nd-btn--full"
-              onClick={handleSubmit}
-              disabled={loading}
+              disabled={!canProceed()}
+              onClick={() => setStep(3)}
             >
-              {loading
-                ? 'Submitting…'
-                : recurring.enabled
-                  ? `Confirm ${recurring.frequency.charAt(0).toUpperCase() + recurring.frequency.slice(1)} Plan ✓`
-                  : 'Confirm Donation ✓'
-              }
+              Review Donation →
             </button>
-          </section>
-        )}
+          </div>
+        </section>
+      )}
 
-      </main>
-    </div>
+      {/* ── Step 3: confirm ── */}
+      {step === 3 && cat && (
+        <section className="nd-section">
+          <button className="nd-back" onClick={() => setStep(2)}>← Back</button>
+          <h2 className="nd-section__title">Review & Confirm</h2>
+
+          <div className="nd-review">
+            <ReviewRow label="Category"    value={`${cat.icon} ${cat.label}`} />
+            <ReviewRow label="Title"       value={form.title} />
+            <ReviewRow label="Description" value={form.description} />
+
+            {Object.entries(form.details)
+              .filter(([, v]) => v !== '' && v !== undefined && !(Array.isArray(v) && v.length === 0))
+              .map(([k, v]) => (
+                <ReviewRow
+                  key={k}
+                  label={k.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase())}
+                  value={v}
+                />
+              ))
+            }
+
+            {recurring.enabled && (
+              <>
+                <div className="nd-review__divider" />
+                <ReviewRow label="🔁 Schedule" value={`${recurring.frequency.charAt(0).toUpperCase() + recurring.frequency.slice(1)}`} />
+                <ReviewRow label="Starts"      value={recurring.startDate} />
+                {recurring.endDate && <ReviewRow label="Ends" value={recurring.endDate} />}
+              </>
+            )}
+
+            <ReviewRow label="Donor" value={user.name} />
+          </div>
+
+          {error && <p className="nd-error">{error}</p>}
+
+          <button
+            className="nd-btn nd-btn--primary nd-btn--full"
+            onClick={handleSubmit}
+            disabled={loading}
+          >
+            {loading
+              ? 'Submitting…'
+              : recurring.enabled
+                ? `Confirm ${recurring.frequency.charAt(0).toUpperCase() + recurring.frequency.slice(1)} Plan ✓`
+                : 'Confirm Donation ✓'
+            }
+          </button>
+        </section>
+      )}
+    </>
   )
 }
 
-/* ── Sidebar ── */
-function Sidebar({ user, navigate }) {
-  const handleLogout = () => {
-    localStorage.removeItem(STORAGE_KEY)
-    navigate('/')
-  }
+/* ═══════════════════════════════════════════════════════════ */
+export default function NewDonation() {
+  const navigate = useNavigate()
+
   return (
-    <aside className="dash-sidebar">
-      <Link to="/" className="dash-logo">Aid<span>Bridge</span></Link>
-      <nav className="dash-nav">
-        <span className="dash-nav__label">Menu</span>
-        <Link to="/dashboard" className="dash-nav__item"><span>🏠</span> Overview</Link>
-        <Link to="/donations/new" className="dash-nav__item dash-nav__item--active"><span>➕</span> New Donation</Link>
-        <Link to="/dashboard/donations" className="dash-nav__item"><span>📦</span> My Donations</Link>
-        <Link to="/dashboard/plans" className="dash-nav__item"><span>🔁</span> My Plans</Link>
-        <Link to="/dashboard/impact" className="dash-nav__item"><span>📊</span> Impact</Link>
-        <Link to="/feedback" className="dash-nav__item"><span>💬</span> Feedback</Link>
-        <Link to="/dashboard/settings" className="dash-nav__item"><span>⚙️</span> Settings</Link>
-      </nav>
-      <button className="dash-logout" onClick={handleLogout}>Sign Out</button>
-    </aside>
+    <DonorDashboardLayout activePage="new">
+      {({ user }) => (
+        <NewDonationContent user={user} navigate={navigate} />
+      )}
+    </DonorDashboardLayout>
   )
 }
